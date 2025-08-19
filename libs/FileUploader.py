@@ -1,5 +1,6 @@
 import os
 import sys
+import pandas as pd
 
 from PyQt5 import uic
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -12,7 +13,7 @@ from gurux_dlms.objects import GXDLMSData, GXDLMSObject
 from libs.WorkerThread import WorkerThreadForReadCollection
 from libs.configur import server, login, password, folder
 from libs.connect import connect
-from libs.recorded_objects import set_value_for_data
+from libs.recorded_objects import set_value
 
 
 class EmittingStream(QObject):
@@ -222,7 +223,8 @@ class FileUploader(QWidget):
             self.update_text(f'Объект {data.logicalName}, "не записался, ошибка >> {e}', "red")
 
     def update_text(self, message, color):
-        self.text_edit.append(f"\n<font color={color} size='4'>{message}</font>\n")
+        self.text_edit.append(f"<font color={color} size='4'>{message}</font>")
+        self.text_edit.append(f"<font color='white' size='4'></font>")
 
     def redirect_stdout(self):
         self.stream = EmittingStream()
@@ -304,20 +306,37 @@ class FileUploader(QWidget):
         print(f"Прогресс: {value}%")
 
     def handle_result(self, result):
-        # Здесь обрабатываем полученный результат
-        self.objects_list = result
-        # arr_type = set()
-        arr_obis = []
-        for i in self.objects_list:
-            self.attribute_categories[i.logicalName] = [str(y) for y in range(1, i.getAttributeCount() + 1)]
-            # arr_type.add(type(i))
-            arr_obis.append(i.logicalName)
-        self.obises.addItems(arr_obis)
+        try:
+            current_dir = sys.path[0]
+            file_path = os.path.join(current_dir, 'libs', "All_OBIS.xlsx")
+            df = pd.read_excel(file_path)
+            # obis_values = df['OBIS']
+            # meter_types = df['Описание']
+
+
+            temp_description = {}
+            for index, row in df.iterrows():
+                temp_description[row['OBIS']] = row['Описание']
+                # print(f"OBIS: {row['OBIS']}")
+                # print(f"Описание: {row['Описание']}")
+                # print("---")
+
+            # Здесь обрабатываем полученный результат
+            self.objects_list = result
+
+            arr_obis = []
+            for i in self.objects_list:
+                self.attribute_categories[i.logicalName] = [str(y) for y in range(1, i.getAttributeCount() + 1)]
+                # arr_type.add(type(i))
+                arr_obis.append(i.logicalName + ' ' + temp_description[i.logicalName])
+            self.obises.addItems(arr_obis)
+        except Exception as e:
+            print(e)
 
     def update_files(self):
         try:
             # Получаем выбранную категорию
-            selected_category = self.obises.currentText()
+            selected_category = self.obises.currentText().split()[0]
 
             # Очищаем второй комбобокс
             self.attribute.clear()
@@ -329,7 +348,7 @@ class FileUploader(QWidget):
             print(e)
 
     def read_param(self):
-        obis = self.obises.currentText()
+        obis = self.obises.currentText().split()[0]
         attribute = self.attribute.currentText()
         temp_object = None
 
@@ -355,16 +374,15 @@ class FileUploader(QWidget):
             reader.initializeConnection()
             print("Соединение установлено")
 
-            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >> ',
+            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >>',
                   reader.read(temp_object, int(attribute)))
 
             reader.close()
             print("Соединение разорвано\n")
         except Exception as e:
             settings.media.close()
-            self.update_text(f"Ошибка {e}.", "red")
-            print()
-            self.update_text(f"Проверьте настройки.", "red")
+            self.update_text(f"Ошибка при считывании >> {e}.", "red")
+            print("Соединение разорвано\n")
 
     def write_param(self):
         if not self.number_com.text().strip():
@@ -386,7 +404,7 @@ class FileUploader(QWidget):
             )
             return
 
-        obis = self.obises.currentText()
+        obis = self.obises.currentText().split()[0]
         attribute = self.attribute.currentText()
         temp_object = None
 
@@ -404,7 +422,7 @@ class FileUploader(QWidget):
 
             value = self.value.text()
 
-            if not set_value_for_data(temp_object, settings, reader, value, attribute):
+            if not set_value(temp_object, reader, value, attribute):
                 reader.close()
                 print("Соединение разорвано\n")
                 return
@@ -416,6 +434,5 @@ class FileUploader(QWidget):
             print("Соединение разорвано\n")
         except Exception as e:
             settings.media.close()
-            self.update_text(f"\nОшибка {e}.", "red")
-            print()
-            self.update_text(f"Проверьте настройки.\n ", "red")
+            self.update_text(f"Ошибка при записи >> {e}.", "red")
+            print("Соединение разорвано\n")

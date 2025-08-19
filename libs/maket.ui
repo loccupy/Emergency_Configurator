@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>550</width>
-    <height>450</height>
+    <height>540</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -89,7 +89,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>260</y>
+     <y>340</y>
      <width>531</width>
      <height>31</height>
     </rect>
@@ -105,7 +105,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>300</y>
+     <y>390</y>
      <width>531</width>
      <height>141</height>
     </rect>
@@ -132,7 +132,7 @@
      <x>10</x>
      <y>80</y>
      <width>531</width>
-     <height>171</height>
+     <height>251</height>
     </rect>
    </property>
    <property name="title">
@@ -143,7 +143,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>241</width>
+      <width>431</width>
       <height>31</height>
      </rect>
     </property>
@@ -159,15 +159,15 @@
      <rect>
       <x>10</x>
       <y>100</y>
-      <width>241</width>
-      <height>31</height>
+      <width>511</width>
+      <height>141</height>
      </rect>
     </property>
     <property name="text">
      <string/>
     </property>
     <property name="maxLength">
-     <number>30</number>
+     <number>1500</number>
     </property>
     <property name="alignment">
      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -185,9 +185,9 @@
    <widget class="QComboBox" name="attr">
     <property name="geometry">
      <rect>
-      <x>260</x>
+      <x>450</x>
       <y>20</y>
-      <width>241</width>
+      <width>71</width>
       <height>31</height>
      </rect>
     </property>
@@ -203,7 +203,7 @@
      <rect>
       <x>10</x>
       <y>60</y>
-      <width>491</width>
+      <width>251</width>
       <height>31</height>
      </rect>
     </property>
@@ -214,9 +214,9 @@
    <widget class="QPushButton" name="write">
     <property name="geometry">
      <rect>
-      <x>260</x>
-      <y>100</y>
-      <width>241</width>
+      <x>270</x>
+      <y>60</y>
+      <width>251</width>
       <height>31</height>
      </rect>
     </property>
