@@ -48,7 +48,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>251</width>
+      <width>231</width>
       <height>31</height>
      </rect>
     </property>
@@ -69,6 +69,19 @@
     </property>
     <property name="placeholderText">
      <string>Введите номер COM-port</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="read_collection">
+    <property name="geometry">
+     <rect>
+      <x>250</x>
+      <y>20</y>
+      <width>271</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Считать коллекцию</string>
     </property>
    </widget>
   </widget>
@@ -111,12 +124,15 @@
    </property>
   </widget>
   <widget class="QGroupBox" name="groupBox_2">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>10</x>
      <y>80</y>
      <width>531</width>
-     <height>101</height>
+     <height>171</height>
     </rect>
    </property>
    <property name="title">
@@ -127,7 +143,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>251</width>
+      <width>241</width>
       <height>31</height>
      </rect>
     </property>
@@ -138,40 +154,12 @@
      <number>15</number>
     </property>
    </widget>
-   <widget class="QLineEdit" name="attribute_number">
-    <property name="geometry">
-     <rect>
-      <x>270</x>
-      <y>20</y>
-      <width>251</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="maxLength">
-     <number>2</number>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-    </property>
-    <property name="dragEnabled">
-     <bool>false</bool>
-    </property>
-    <property name="readOnly">
-     <bool>false</bool>
-    </property>
-    <property name="placeholderText">
-     <string>Ввведи номер атрибута</string>
-    </property>
-   </widget>
    <widget class="QLineEdit" name="value">
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
-      <width>251</width>
+      <y>100</y>
+      <width>241</width>
       <height>31</height>
      </rect>
     </property>
@@ -192,6 +180,48 @@
     </property>
     <property name="placeholderText">
      <string>Ввведи значение </string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="attr">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>20</y>
+      <width>241</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="editable">
+     <bool>false</bool>
+    </property>
+    <property name="maxVisibleItems">
+     <number>15</number>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="read">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>60</y>
+      <width>491</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Считать атрибут</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="write">
+    <property name="geometry">
+     <rect>
+      <x>260</x>
+      <y>100</y>
+      <width>241</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Записать атрибут</string>
     </property>
    </widget>
   </widget>
