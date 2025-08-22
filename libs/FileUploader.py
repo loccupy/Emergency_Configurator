@@ -5,14 +5,16 @@ import pandas as pd
 from PyQt5 import uic
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtGui import QIntValidator, QTextCursor
-from PyQt5.QtWidgets import QWidget, QLineEdit, QPushButton, QTextEdit, QMessageBox, QApplication, QComboBox
-from gurux_dlms import GXUInt32, GXUInt16, ValueEventArgs
+from PyQt5.QtWidgets import QWidget, QLineEdit, QPushButton, QTextEdit, QMessageBox, QApplication, QComboBox, \
+    QVBoxLayout, QDialogButtonBox, QDialog, QSizePolicy
+from gurux_dlms import GXUInt32, GXUInt16
 from gurux_dlms.enums import DataType
-from gurux_dlms.objects import GXDLMSData, GXDLMSObject
+from gurux_dlms.objects import GXDLMSData
 
 from libs.WorkerThread import WorkerThreadForReadCollection
 from libs.configur import server, login, password, folder
 from libs.connect import connect
+from libs.reader_objects import read_obj
 from libs.recorded_objects import set_value
 
 
@@ -24,6 +26,42 @@ class EmittingStream(QObject):
 
     def flush(self):
         pass  # Необходимо для совместимости с sys.stdout
+
+
+class InputDialog(QDialog):
+    value_submitted = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Введите новое значение')
+
+        layout = QVBoxLayout()
+
+        self.input_field = QTextEdit()
+        # self.input_field.setWhatsThis("Введите новое значение в поле. Формат соответствует значению при считывании.")
+        self.input_field.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.input_field.setReadOnly(False)
+        # Настраиваем политику размера
+        self.input_field.setSizePolicy(
+            QSizePolicy.Expanding,
+            QSizePolicy.Expanding
+        )
+        layout.addWidget(self.input_field, stretch=2)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
+            parent=self
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
+
+    def accept(self):
+        value = self.input_field.toPlainText()
+        self.value_submitted.emit(value)
+        super().accept()
 
 
 class FileUploader(QWidget):
@@ -40,7 +78,7 @@ class FileUploader(QWidget):
 
         self.thread = WorkerThreadForReadCollection()
         self.thread.finished.connect(self.on_finished)
-        self.thread.progress.connect(self.update_progress)
+        # self.thread.progress.connect(self.update_progress)
         self.thread.result.connect(self.handle_result)
 
         self.attribute_categories = {}
@@ -56,171 +94,186 @@ class FileUploader(QWidget):
         self.attribute = self.findChild(QComboBox, 'attr')
 
         self.read_attr = self.findChild(QPushButton, 'read')
+        self.read_attr.setEnabled(False)
         self.read_attr.clicked.connect(self.read_param)
 
-        self.value = self.findChild(QLineEdit, 'value')
+        self.value = None
 
         self.write_att = self.findChild(QPushButton, 'write')
-        self.write_att.clicked.connect(self.write_param)
+        self.write_att.setEnabled(False)
+        # self.write_att.clicked.connect(self.write_param)
+        self.write_att.clicked.connect(self.show_input_dialog)
 
         # Подключаем сигнал изменения выбора
         self.obises.currentIndexChanged.connect(self.update_files)
 
-        self.start = self.findChild(QPushButton, 'start_button')
-        self.start.clicked.connect(self.start_command)
+        # self.start = self.findChild(QPushButton, 'start_button')
+        # self.start.clicked.connect(self.start_command)
 
         self.text_edit = self.findChild(QTextEdit, 'textEdit')
+        self.text_edit.setLineWrapMode(QTextEdit.WidgetWidth)
         self.text_edit.setReadOnly(True)  # Запрещаем редактирование
         self.redirect_stdout()
         self.stream.textWritten.connect(self.on_text_written)
 
         self.applyDarkTheme()
 
-    def start_command(self):
-        self.text_edit.clear()
-        if not self.number_com.text().strip():
-            # Показываем предупреждение
-            QMessageBox.warning(
-                self,
-                "Предупреждение",
-                "Введите COM соединения!",
-                QMessageBox.Ok
-            )
-            return
+    def show_input_dialog(self):
+        dialog = InputDialog(self)
+        dialog.value_submitted.connect(self.write_param)
+        dialog.exec_()
 
-        com = self.number_com.text()
-        reader, settings = connect(com)
-        try:
-            settings.media.open()
-            reader.initializeConnection()
+    # def handle_input(self, value):
+    #     # Здесь обрабатываем введенное значение
+    #     print(f"Введено значение: {value}")
+    #     # Добавьте свою логику обработки
+    #     self.value = value
 
-            self.set_ftp(reader)
+    # def start_command(self):
+    #     self.text_edit.clear()
+    #     if not self.number_com.text().strip():
+    #         # Показываем предупреждение
+    #         QMessageBox.warning(
+    #             self,
+    #             "Предупреждение",
+    #             "Введите COM соединения!",
+    #             QMessageBox.Ok
+    #         )
+    #         return
+    #
+    #     com = self.number_com.text()
+    #     reader, settings = connect(com)
+    #     try:
+    #         settings.media.open()
+    #         reader.initializeConnection()
+    #
+    #         self.set_ftp(reader)
+    #
+    #         self.set_harm(reader)
+    #
+    #         self.short_circuit_detector(reader)
+    #
+    #         reader.close()
+    #     except Exception as e:
+    #         settings.media.close()
+    #         self.update_text(f"Ошибка {e}.", "red")
+    #         print()
+    #         self.update_text(f"Проверьте настройки.", "red")
 
-            self.set_harm(reader)
+    # def short_circuit_detector(self, reader):
+    #     data = GXDLMSData('0.0.2.164.11.255')
+    #     try:
+    #         value = 65535
+    #         array_data = reader.read(data, 2)
+    #
+    #         data.setDataType(2, DataType.STRUCTURE)
+    #
+    #         for z in range(6):
+    #             array_data[z] = GXUInt32(value)
+    #
+    #         data.value = array_data
+    #
+    #         reader.write(data, 2)
+    #
+    #         actual = reader.read(data, 2)
+    #
+    #         try:
+    #             for z in range(6):
+    #                 assert actual[z] == GXUInt32(value)
+    #             self.update_text(f"Пороги детектора короткого замыкания успешно записаны", "green")
+    #         except AssertionError as e:
+    #             self.update_text(f"Ошибка значения поля {z} Порогов детектора кз >> {e}", "red")
+    #
+    #     except Exception as e:
+    #         self.update_text(f"Ошибка при записи порогов детектора короткого замыкания >> {e}", "red")
 
-            self.short_circuit_detector(reader)
+    # def set_harm(self, reader):
+    #     data = GXDLMSData('0.0.2.164.6.255')
+    #     try:
+    #         new_arrays = reader.read(data, 2)
+    #         data.setDataType(2, DataType.STRUCTURE)
+    #
+    #         for z in range(6):
+    #             for i in range(30):
+    #                 if z in [0, 1, 2]:
+    #                     if i == 10:
+    #                         new_arrays[z][i] = GXUInt16(17)
+    #                     elif i == 12:
+    #                         new_arrays[z][i] = GXUInt16(14)
+    #                     else:
+    #                         new_arrays[z][i] = GXUInt16(65535)
+    #                 else:
+    #                     new_arrays[z][i] = GXUInt16(65535)
+    #
+    #         data.value = new_arrays
+    #         reader.write(data, 2)
+    #
+    #         actual_arrays = reader.read(data, 2)
+    #
+    #         try:
+    #             for z in range(6):
+    #                 for i in range(30):
+    #                     if z in [0, 1, 2]:
+    #                         if i == 10:
+    #                             assert actual_arrays[z][i] == 17
+    #                         elif i == 12:
+    #                             assert actual_arrays[z][i] == 14
+    #                         else:
+    #                             assert actual_arrays[z][i] == 65535
+    #                     else:
+    #                         assert actual_arrays[z][i] == 65535
+    #             self.update_text(f"Гармоники успешно записаны", "green")
+    #
+    #         except AssertionError as e:
+    #             self.update_text(f"Ошибка при записи гармоники с координатами "
+    #                              f"[структура №{z + 1}- строчка №{i + 1}] >> {e}", "red")
+    #
+    #     except Exception as e:
+    #         self.update_text(f"Ошибка при записи гармоники >> {e}", "red")
 
-            reader.close()
-        except Exception as e:
-            settings.media.close()
-            self.update_text(f"Ошибка {e}.", "red")
-            print()
-            self.update_text(f"Проверьте настройки.", "red")
+    # def set_ftp(self, reader):
+    #     try:
+    #         ftp_server = GXDLMSData('0.0.2.164.1.255')
+    #         ftp_server_login = GXDLMSData('0.0.2.164.2.255')
+    #         ftp_server_password = GXDLMSData('0.0.2.164.3.255')
+    #         ftp_server_folder = GXDLMSData('0.0.2.164.4.255')
+    #
+    #         ftp_server.value = server
+    #         ftp_server.setDataType(2, DataType.STRING)
+    #
+    #         ftp_server_login.value = login
+    #         ftp_server_login.setDataType(2, DataType.STRING)
+    #
+    #         ftp_server_password.value = password
+    #         ftp_server_password.setDataType(2, DataType.STRING)
+    #
+    #         ftp_server_folder.value = folder
+    #         ftp_server_folder.setDataType(2, DataType.STRING)
+    #
+    #         self.write_value(ftp_server_password, reader)
+    #         self.write_value(ftp_server, reader)
+    #         self.write_value(ftp_server_login, reader)
+    #         self.write_value(ftp_server_folder, reader)
+    #
+    #         set_server = reader.read(ftp_server, 2)
+    #         set_login = reader.read(ftp_server_login, 2)
+    #         set_folder = reader.read(ftp_server_folder, 2)
+    #         set_password = reader.read(ftp_server_password, 2)
+    #
+    #         self.update_text(f"Установленное значение server [{ftp_server.logicalName}] = {set_server}.", "green")
+    #         self.update_text(f"Установленное значение login [{ftp_server_login.logicalName}] = {set_login}.", "green")
+    #         self.update_text(f"Установленное значение folder [{ftp_server_folder.logicalName}] = {set_folder}.",
+    #                          "green")
+    #         self.update_text(f"Установленное значение password [{ftp_server_password.logicalName}] = {set_password}.",
+    #                          "green")
+    #     except Exception as e:
+    #         self.update_text(f"Ошибка при записи параметров FTP >> {e}", "red")
 
-    def short_circuit_detector(self, reader):
-        data = GXDLMSData('0.0.2.164.11.255')
-        try:
-            value = 65535
-            array_data = reader.read(data, 2)
-
-            data.setDataType(2, DataType.STRUCTURE)
-
-            for z in range(6):
-                array_data[z] = GXUInt32(value)
-
-            data.value = array_data
-
-            reader.write(data, 2)
-
-            actual = reader.read(data, 2)
-
-            try:
-                for z in range(6):
-                    assert actual[z] == GXUInt32(value)
-                self.update_text(f"Пороги детектора короткого замыкания успешно записаны", "green")
-            except AssertionError as e:
-                self.update_text(f"Ошибка значения поля {z} Порогов детектора кз >> {e}", "red")
-
-        except Exception as e:
-            self.update_text(f"Ошибка при записи порогов детектора короткого замыкания >> {e}", "red")
-
-    def set_harm(self, reader):
-        data = GXDLMSData('0.0.2.164.6.255')
-        try:
-            new_arrays = reader.read(data, 2)
-            data.setDataType(2, DataType.STRUCTURE)
-
-            for z in range(6):
-                for i in range(30):
-                    if z in [0, 1, 2]:
-                        if i == 10:
-                            new_arrays[z][i] = GXUInt16(17)
-                        elif i == 12:
-                            new_arrays[z][i] = GXUInt16(14)
-                        else:
-                            new_arrays[z][i] = GXUInt16(65535)
-                    else:
-                        new_arrays[z][i] = GXUInt16(65535)
-
-            data.value = new_arrays
-            reader.write(data, 2)
-
-            actual_arrays = reader.read(data, 2)
-
-            try:
-                for z in range(6):
-                    for i in range(30):
-                        if z in [0, 1, 2]:
-                            if i == 10:
-                                assert actual_arrays[z][i] == 17
-                            elif i == 12:
-                                assert actual_arrays[z][i] == 14
-                            else:
-                                assert actual_arrays[z][i] == 65535
-                        else:
-                            assert actual_arrays[z][i] == 65535
-                self.update_text(f"Гармоники успешно записаны", "green")
-
-            except AssertionError as e:
-                self.update_text(f"Ошибка при записи гармоники с координатами "
-                                 f"[структура №{z + 1}- строчка №{i + 1}] >> {e}", "red")
-
-        except Exception as e:
-            self.update_text(f"Ошибка при записи гармоники >> {e}", "red")
-
-    def set_ftp(self, reader):
-        try:
-            ftp_server = GXDLMSData('0.0.2.164.1.255')
-            ftp_server_login = GXDLMSData('0.0.2.164.2.255')
-            ftp_server_password = GXDLMSData('0.0.2.164.3.255')
-            ftp_server_folder = GXDLMSData('0.0.2.164.4.255')
-
-            ftp_server.value = server
-            ftp_server.setDataType(2, DataType.STRING)
-
-            ftp_server_login.value = login
-            ftp_server_login.setDataType(2, DataType.STRING)
-
-            ftp_server_password.value = password
-            ftp_server_password.setDataType(2, DataType.STRING)
-
-            ftp_server_folder.value = folder
-            ftp_server_folder.setDataType(2, DataType.STRING)
-
-            self.write_value(ftp_server_password, reader)
-            self.write_value(ftp_server, reader)
-            self.write_value(ftp_server_login, reader)
-            self.write_value(ftp_server_folder, reader)
-
-            set_server = reader.read(ftp_server, 2)
-            set_login = reader.read(ftp_server_login, 2)
-            set_folder = reader.read(ftp_server_folder, 2)
-            set_password = reader.read(ftp_server_password, 2)
-
-            self.update_text(f"Установленное значение server [{ftp_server.logicalName}] = {set_server}.", "green")
-            self.update_text(f"Установленное значение login [{ftp_server_login.logicalName}] = {set_login}.", "green")
-            self.update_text(f"Установленное значение folder [{ftp_server_folder.logicalName}] = {set_folder}.",
-                             "green")
-            self.update_text(f"Установленное значение password [{ftp_server_password.logicalName}] = {set_password}.",
-                             "green")
-        except Exception as e:
-            self.update_text(f"Ошибка при записи параметров FTP >> {e}", "red")
-
-    def write_value(self, data, reader):
-        try:
-            reader.write(data, 2)
-        except Exception as e:
-            self.update_text(f'Объект {data.logicalName}, "не записался, ошибка >> {e}', "red")
+    # def write_value(self, data, reader):
+    #     try:
+    #         reader.write(data, 2)
+    #     except Exception as e:
+    #         self.update_text(f'Объект {data.logicalName}, "не записался, ошибка >> {e}', "red")
 
     def update_text(self, message, color):
         self.text_edit.append(f"<font color={color} size='4'>{message}</font>")
@@ -293,6 +346,8 @@ class FileUploader(QWidget):
 
             self.thread.com = self.number_com.text()
             self.read_collection.setEnabled(False)
+            self.write_att.setEnabled(False)
+            self.read_attr.setEnabled(False)
             self.thread.start()
 
         except Exception as e:
@@ -300,6 +355,8 @@ class FileUploader(QWidget):
 
     def on_finished(self):
         self.read_collection.setEnabled(True)
+        self.write_att.setEnabled(True)
+        self.read_attr.setEnabled(True)
         print("Задача завершена")
 
     def update_progress(self, value):
@@ -313,17 +370,24 @@ class FileUploader(QWidget):
             # obis_values = df['OBIS']
             # meter_types = df['Описание']
 
-
             temp_description = {}
             for index, row in df.iterrows():
                 temp_description[row['OBIS']] = row['Описание']
-                # print(f"OBIS: {row['OBIS']}")
-                # print(f"Описание: {row['Описание']}")
-                # print("---")
 
+            # print(len(temp_description))
+
+            # for key in temp_description:
+            #     for i in range(len(result)):
+            #         if key == result[i].logicalName:
+            #             break
+            #     else:
+            #         print(key)
             # Здесь обрабатываем полученный результат
-            self.objects_list = result
 
+            self.obises.clear()
+            self.objects_list = result
+            # print(len([i for i in self.objects_list]))
+            self.attribute_categories = {}
             arr_obis = []
             for i in self.objects_list:
                 self.attribute_categories[i.logicalName] = [str(y) for y in range(1, i.getAttributeCount() + 1)]
@@ -334,18 +398,20 @@ class FileUploader(QWidget):
             print(e)
 
     def update_files(self):
-        try:
-            # Получаем выбранную категорию
-            selected_category = self.obises.currentText().split()[0]
+        if self.obises:
+            try:
+                # Получаем выбранную категорию
 
-            # Очищаем второй комбобокс
-            self.attribute.clear()
+                selected_category = self.obises.currentText().split()[0]
 
-            # Заполняем второй комбобокс соответствующими файлами
-            if selected_category in self.attribute_categories:
-                self.attribute.addItems(self.attribute_categories[selected_category])
-        except Exception as e:
-            print(e)
+                # Очищаем второй комбобокс
+                self.attribute.clear()
+
+                # Заполняем второй комбобокс соответствующими файлами
+                if selected_category in self.attribute_categories:
+                    self.attribute.addItems(self.attribute_categories[selected_category])
+            except Exception as e:
+                print(e)
 
     def read_param(self):
         obis = self.obises.currentText().split()[0]
@@ -374,8 +440,9 @@ class FileUploader(QWidget):
             reader.initializeConnection()
             print("Соединение установлено")
 
-            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >>',
-                  reader.read(temp_object, int(attribute)))
+            value = read_obj(temp_object, reader, attribute) # если значение невозможно преобразовать в строку, возвращает ошибку - надо доработать
+
+            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >>', value)
 
             reader.close()
             print("Соединение разорвано\n")
@@ -384,7 +451,7 @@ class FileUploader(QWidget):
             self.update_text(f"Ошибка при считывании >> {e}.", "red")
             print("Соединение разорвано\n")
 
-    def write_param(self):
+    def write_param(self, value):
         if not self.number_com.text().strip():
             # Показываем предупреждение
             QMessageBox.warning(
@@ -394,15 +461,15 @@ class FileUploader(QWidget):
                 QMessageBox.Ok
             )
             return
-        if not self.value.text().strip():
-            # Показываем предупреждение
-            QMessageBox.warning(
-                self,
-                "Предупреждение",
-                "Введите данные в поле Value!",
-                QMessageBox.Ok
-            )
-            return
+        # if not self.value.text().strip():
+        #     # Показываем предупреждение
+        #     QMessageBox.warning(
+        #         self,
+        #         "Предупреждение",
+        #         "Введите данные в поле Value!",
+        #         QMessageBox.Ok
+        #     )
+        #     return
 
         obis = self.obises.currentText().split()[0]
         attribute = self.attribute.currentText()
@@ -420,7 +487,7 @@ class FileUploader(QWidget):
             reader.initializeConnection()
             print("Соединение установлено")
 
-            value = self.value.text()
+            # value = self.value.text()
 
             if not set_value(temp_object, reader, value, attribute):
                 reader.close()

@@ -1,5 +1,6 @@
-from gurux_dlms.objects import GXDLMSAssociationLogicalName
+from gurux_dlms.objects import GXDLMSAssociationLogicalName, GXDLMSData
 
+# from libs.GXDLMSCommunicationPortProtection import GXDLMSCommunicationPortProtection
 from libs.connect import connect
 
 
@@ -15,9 +16,7 @@ def get_obises(com):
         settings.media.open()
         reader.initializeConnection()
 
-        # temp = get_obises_from_meter(reader)
-        object_list = reader.read(GXDLMSAssociationLogicalName('0.0.40.0.0.255'), 2)
-
+        object_list = reader.read(GXDLMSAssociationLogicalName('0.0.40.0.0.255'), 2)  # Не считывает CommPortProtection!!!
         reader.close()
 
         print('Коллекция считана.')
