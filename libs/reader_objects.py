@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from gurux_dlms.enums import ObjectType, DataType
+from gurux_dlms.objects import GXDLMSActionItem
 
 
 def read_obj(obj, reader, attribute):
@@ -16,13 +17,17 @@ def read_obj(obj, reader, attribute):
         return get_value_from_iec_hdlc_setup(obj, reader, attribute)
     elif obj.getObjectType() == ObjectType.LIMITER:
         return get_value_from_limiter(obj, reader, attribute)
+    elif obj.getObjectType() == ObjectType.DISCONNECT_CONTROL:
+        return get_value_from_disconnect_control(obj, reader, attribute)
+    elif obj.getObjectType() == ObjectType.PUSH_SETUP:
+        return get_value_from_push_setup(obj, reader, attribute)
     else:
         return reader.read(obj, int(attribute))
 
 
 def get_value_from_data(obj, reader, attribute):
     if obj.logicalName in ['0.0.42.0.0.255', '0.0.96.1.0.255', '0.0.96.1.1.255', '0.0.96.1.2.255', '0.0.96.1.3.255',
-                           '0.0.96.1.4.255', '0.0.96.1.6.255', '0.0.96.1.8.255', '0.0.96.1.9.255']:
+                           '0.0.96.1.4.255', '0.0.96.1.6.255', '0.0.96.1.8.255', '0.0.96.1.9.255'] and attribute == '2':
         value = reader.read(obj, int(attribute)).decode()
     elif obj.logicalName == '0.0.0.9.2.255':
         value = reader.read(obj, int(attribute)).value.strftime('%d.%m.%Y')
@@ -77,5 +82,19 @@ def get_value_from_iec_hdlc_setup(obj, reader, attribute):
 
 
 def get_value_from_limiter(obj, reader, attribute):
+    if attribute == '11':
+        value = reader.read(obj, int(attribute))
+        value = [f'{value[0].logicalName}: {value[0].scriptSelector}', f'{value[1].logicalName}: {value[1].scriptSelector}']
+    else:
+        value = reader.read(obj, int(attribute))
+    return value
+
+
+def get_value_from_disconnect_control(obj, reader, attribute):
+    value = reader.read(obj, int(attribute))
+    return value
+
+
+def get_value_from_push_setup(obj, reader, attribute):
     value = reader.read(obj, int(attribute))
     return value

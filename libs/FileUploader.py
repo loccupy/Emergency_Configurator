@@ -8,14 +8,15 @@ from PyQt5.QtGui import QIntValidator, QTextCursor
 from PyQt5.QtWidgets import QWidget, QLineEdit, QPushButton, QTextEdit, QMessageBox, QApplication, QComboBox, \
     QVBoxLayout, QDialogButtonBox, QDialog, QSizePolicy
 from gurux_dlms import GXUInt32, GXUInt16
-from gurux_dlms.enums import DataType
-from gurux_dlms.objects import GXDLMSData
+from gurux_dlms.enums import DataType, ObjectType
+from gurux_dlms.objects import GXDLMSData, GXDLMSObject
 
 from libs.WorkerThread import WorkerThreadForReadCollection
 from libs.configur import server, login, password, folder
 from libs.connect import connect
 from libs.reader_objects import read_obj
 from libs.recorded_objects import set_value
+from libs.utils import parse_data_type
 
 
 class EmittingStream(QObject):
@@ -76,33 +77,42 @@ class FileUploader(QWidget):
 
         uic.loadUi(ui_path, self)
 
-        self.thread = WorkerThreadForReadCollection()
-        self.thread.finished.connect(self.on_finished)
-        # self.thread.progress.connect(self.update_progress)
-        self.thread.result.connect(self.handle_result)
+        # self.thread = WorkerThreadForReadCollection()
+        # self.thread.finished.connect(self.on_finished)
+        # self.thread.result.connect(self.handle_result)
+
+        self.attributes_for_recording = []
+        self.add_attr = self.findChild(QPushButton, 'add_attribute')
+        self.add_attr.clicked.connect(self.show_input_dialog)
+        # self.add_attr.clicked.connect(self.update_changes_log)
+
+        self.text_edit_2 = self.findChild(QTextEdit, 'textEdit_2')
+        self.text_edit_2.setReadOnly(True)  # Запрещаем редактирование
+        self.text_edit_2.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.text_edit_2.setPlaceholderText("Параметры на изменение")
 
         self.attribute_categories = {}
 
         self.number_com = self.findChild(QLineEdit, 'enter_com')
         self.number_com.setValidator(QIntValidator())
 
-        self.read_collection = self.findChild(QPushButton, 'read_collection')
-        self.read_collection.clicked.connect(self.start_thread)
+        # self.read_collection = self.findChild(QPushButton, 'read_collection')
+        # self.read_collection.setEnabled(False)
+        # self.read_collection.clicked.connect(self.start_thread)
 
         self.obises = self.findChild(QComboBox, 'obis')
 
         self.attribute = self.findChild(QComboBox, 'attr')
 
         self.read_attr = self.findChild(QPushButton, 'read')
-        self.read_attr.setEnabled(False)
         self.read_attr.clicked.connect(self.read_param)
 
         self.value = None
 
         self.write_att = self.findChild(QPushButton, 'write')
-        self.write_att.setEnabled(False)
+        # self.write_att.setEnabled(False)
         # self.write_att.clicked.connect(self.write_param)
-        self.write_att.clicked.connect(self.show_input_dialog)
+        self.write_att.clicked.connect(self.write_param)
 
         # Подключаем сигнал изменения выбора
         self.obises.currentIndexChanged.connect(self.update_files)
@@ -118,9 +128,35 @@ class FileUploader(QWidget):
 
         self.applyDarkTheme()
 
+        # self.add_attr.clicked.connect(self.show_input_dialog)
+
+        self.get_all_objects_from_excel()
+
+        self.update_attributes_display()
+
+    def update_attributes_display(self):
+        """Обновляет отображение атрибутов в textEdit_2"""
+        text = self.attributes_for_recording
+        if self.attributes_for_recording:
+            text = "\n".join([f'Ожидается запись значения "{attr[1]}" в атрибут №{attr[2]} объекта {attr[0]}..' for attr in text])
+            self.text_edit_2.setPlainText(text)
+
+    def clear_attributes(self):
+        self.attributes_for_recording.clear()
+        self.update_attributes_display()
+
     def show_input_dialog(self):
+        if not self.number_com.text().strip():
+            # Показываем предупреждение
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Введите COM соединения!",
+                QMessageBox.Ok
+            )
+            return
         dialog = InputDialog(self)
-        dialog.value_submitted.connect(self.write_param)
+        dialog.value_submitted.connect(self.add_attributes)
         dialog.exec_()
 
     # def handle_input(self, value):
@@ -397,6 +433,31 @@ class FileUploader(QWidget):
         except Exception as e:
             print(e)
 
+    def get_all_objects_from_excel(self):
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, 'All_OBIS.xlsx')
+            df = pd.read_excel(file_path)
+
+            temp_description = {}
+            for index, row in df.iterrows():
+                temp_description[row['OBIS']] = row['Класс'], row['Описание']
+
+            self.objects_list = temp_description
+
+            self.attribute_categories = {}
+            arr_obis = []
+            for key, value in self.objects_list.items():
+                obis = key
+                object_type = value[0]
+                description = value[1]
+                obj = parse_data_type(obis, object_type)
+                self.attribute_categories[obis] = [str(y) for y in range(1, obj.getAttributeCount() + 1)]
+                arr_obis.append(obis + ' ' + description)
+            self.obises.addItems(arr_obis)
+        except Exception as e:
+            print(e)
+
     def update_files(self):
         if self.obises:
             try:
@@ -418,9 +479,9 @@ class FileUploader(QWidget):
         attribute = self.attribute.currentText()
         temp_object = None
 
-        for i in self.objects_list:
-            if i.logicalName == obis:
-                temp_object = i
+        for key, value in self.objects_list.items():
+            if key == obis:
+                temp_object = parse_data_type(key, value[0])
                 break
 
         if not self.number_com.text().strip():
@@ -451,7 +512,25 @@ class FileUploader(QWidget):
             self.update_text(f"Ошибка при считывании >> {e}.", "red")
             print("Соединение разорвано\n")
 
-    def write_param(self, value):
+    def add_attributes(self, value):
+        attribute = None
+        obis = None
+        temp_object = None
+        try:
+            attribute = self.attribute.currentText()
+            obis = self.obises.currentText().split()[0]
+            for key, val in self.objects_list.items():
+                if key == obis:
+                    temp_object = parse_data_type(key, val[0])
+                    break
+            self.attributes_for_recording.append([temp_object, value, attribute])
+            self.update_attributes_display()
+            print(f'Для атрибута {attribute} объекта {obis} добавлено значение >> ', value)
+        except Exception as e:
+            print(f"Ошибка при добавлении атрибута {attribute} объекта {obis} на запись в очередь", e)
+            raise
+
+    def write_param(self):
         if not self.number_com.text().strip():
             # Показываем предупреждение
             QMessageBox.warning(
@@ -471,14 +550,14 @@ class FileUploader(QWidget):
         #     )
         #     return
 
-        obis = self.obises.currentText().split()[0]
-        attribute = self.attribute.currentText()
-        temp_object = None
-
-        for i in self.objects_list:
-            if i.logicalName == obis:
-                temp_object = i
-                break
+        # obis = self.obises.currentText().split()[0]
+        # attribute = self.attribute.currentText()
+        # temp_object = None
+        #
+        # for key, val in self.objects_list.items():
+        #     if key == obis:
+        #         temp_object = parse_data_type(key, val[0])
+        #         break
 
         com = self.number_com.text()
         reader, settings = connect(com)
@@ -486,16 +565,15 @@ class FileUploader(QWidget):
             settings.media.open()
             reader.initializeConnection()
             print("Соединение установлено")
+            for i in self.attributes_for_recording:
+                if not set_value(i[0], reader, i[1], i[2]):
+                    # reader.close()
+                    # print("Соединение разорвано\n")
+                    # return
+                    continue
 
-            # value = self.value.text()
-
-            if not set_value(temp_object, reader, value, attribute):
-                reader.close()
-                print("Соединение разорвано\n")
-                return
-
-            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} установлено значение >> ',
-                  reader.read(temp_object, int(attribute)))
+                print(f'Для атрибута {i[2]} объекта {i[0].logicalName} установлено значение >> ',
+                      reader.read(i[0], int(i[2])))
 
             reader.close()
             print("Соединение разорвано\n")
