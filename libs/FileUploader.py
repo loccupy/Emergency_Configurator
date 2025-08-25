@@ -84,7 +84,12 @@ class FileUploader(QWidget):
         self.attributes_for_recording = []
         self.add_attr = self.findChild(QPushButton, 'add_attribute')
         self.add_attr.clicked.connect(self.show_input_dialog)
-        # self.add_attr.clicked.connect(self.update_changes_log)
+
+        self.delete_last = self.findChild(QPushButton, 'delete_last')
+        self.delete_last.clicked.connect(self.clear_last_attributes)
+
+        self.delete_all = self.findChild(QPushButton, 'delete_all')
+        self.delete_all.clicked.connect(self.clear_attributes)
 
         self.text_edit_2 = self.findChild(QTextEdit, 'textEdit_2')
         self.text_edit_2.setReadOnly(True)  # Запрещаем редактирование
@@ -128,8 +133,6 @@ class FileUploader(QWidget):
 
         self.applyDarkTheme()
 
-        # self.add_attr.clicked.connect(self.show_input_dialog)
-
         self.get_all_objects_from_excel()
 
         self.update_attributes_display()
@@ -140,10 +143,21 @@ class FileUploader(QWidget):
         if self.attributes_for_recording:
             text = "\n".join([f'Ожидается запись значения "{attr[1]}" в атрибут №{attr[2]} объекта {attr[0]}..' for attr in text])
             self.text_edit_2.setPlainText(text)
+        else:
+            self.text_edit_2.setPlainText('')
 
     def clear_attributes(self):
         self.attributes_for_recording.clear()
         self.update_attributes_display()
+
+    def clear_last_attributes(self):
+        if self.text_edit_2.toPlainText():
+            self.attributes_for_recording.pop(-1)
+            self.update_attributes_display()
+        else:
+            print("Список параметров для записи уже пуст..")
+
+
 
     def show_input_dialog(self):
         if not self.number_com.text().strip():
@@ -368,70 +382,70 @@ class FileUploader(QWidget):
         # Применяем стиль к приложению
         self.setStyleSheet(dark_stylesheet)
 
-    def start_thread(self):
-        try:
-            if not self.number_com.text().strip():
-                # Показываем предупреждение
-                QMessageBox.warning(
-                    self,
-                    "Предупреждение",
-                    "Введите COM соединения!",
-                    QMessageBox.Ok
-                )
-                return
+    # def start_thread(self):
+    #     try:
+    #         if not self.number_com.text().strip():
+    #             # Показываем предупреждение
+    #             QMessageBox.warning(
+    #                 self,
+    #                 "Предупреждение",
+    #                 "Введите COM соединения!",
+    #                 QMessageBox.Ok
+    #             )
+    #             return
+    #
+    #         self.thread.com = self.number_com.text()
+    #         self.read_collection.setEnabled(False)
+    #         self.write_att.setEnabled(False)
+    #         self.read_attr.setEnabled(False)
+    #         self.thread.start()
+    #
+    #     except Exception as e:
+    #         print(e)
 
-            self.thread.com = self.number_com.text()
-            self.read_collection.setEnabled(False)
-            self.write_att.setEnabled(False)
-            self.read_attr.setEnabled(False)
-            self.thread.start()
+    # def on_finished(self):
+    #     self.read_collection.setEnabled(True)
+    #     self.write_att.setEnabled(True)
+    #     self.read_attr.setEnabled(True)
+    #     print("Задача завершена")
 
-        except Exception as e:
-            print(e)
+    # def update_progress(self, value):
+    #     print(f"Прогресс: {value}%")
 
-    def on_finished(self):
-        self.read_collection.setEnabled(True)
-        self.write_att.setEnabled(True)
-        self.read_attr.setEnabled(True)
-        print("Задача завершена")
-
-    def update_progress(self, value):
-        print(f"Прогресс: {value}%")
-
-    def handle_result(self, result):
-        try:
-            current_dir = sys.path[0]
-            file_path = os.path.join(current_dir, 'libs', "All_OBIS.xlsx")
-            df = pd.read_excel(file_path)
-            # obis_values = df['OBIS']
-            # meter_types = df['Описание']
-
-            temp_description = {}
-            for index, row in df.iterrows():
-                temp_description[row['OBIS']] = row['Описание']
-
-            # print(len(temp_description))
-
-            # for key in temp_description:
-            #     for i in range(len(result)):
-            #         if key == result[i].logicalName:
-            #             break
-            #     else:
-            #         print(key)
-            # Здесь обрабатываем полученный результат
-
-            self.obises.clear()
-            self.objects_list = result
-            # print(len([i for i in self.objects_list]))
-            self.attribute_categories = {}
-            arr_obis = []
-            for i in self.objects_list:
-                self.attribute_categories[i.logicalName] = [str(y) for y in range(1, i.getAttributeCount() + 1)]
-                # arr_type.add(type(i))
-                arr_obis.append(i.logicalName + ' ' + temp_description[i.logicalName])
-            self.obises.addItems(arr_obis)
-        except Exception as e:
-            print(e)
+    # def handle_result(self, result):
+    #     try:
+    #         current_dir = sys.path[0]
+    #         file_path = os.path.join(current_dir, 'libs', "All_OBIS.xlsx")
+    #         df = pd.read_excel(file_path)
+    #         # obis_values = df['OBIS']
+    #         # meter_types = df['Описание']
+    #
+    #         temp_description = {}
+    #         for index, row in df.iterrows():
+    #             temp_description[row['OBIS']] = row['Описание']
+    #
+    #         # print(len(temp_description))
+    #
+    #         # for key in temp_description:
+    #         #     for i in range(len(result)):
+    #         #         if key == result[i].logicalName:
+    #         #             break
+    #         #     else:
+    #         #         print(key)
+    #         # Здесь обрабатываем полученный результат
+    #
+    #         self.obises.clear()
+    #         self.objects_list = result
+    #         # print(len([i for i in self.objects_list]))
+    #         self.attribute_categories = {}
+    #         arr_obis = []
+    #         for i in self.objects_list:
+    #             self.attribute_categories[i.logicalName] = [str(y) for y in range(1, i.getAttributeCount() + 1)]
+    #             # arr_type.add(type(i))
+    #             arr_obis.append(i.logicalName + ' ' + temp_description[i.logicalName])
+    #         self.obises.addItems(arr_obis)
+    #     except Exception as e:
+    #         print(e)
 
     def get_all_objects_from_excel(self):
         try:
