@@ -25,7 +25,9 @@ def read_obj(obj, reader, attribute):
     elif obj.getObjectType() == ObjectType.PUSH_SETUP:
         return get_value_from_push_setup(obj, reader, attribute)
     elif obj.getObjectType() == ObjectType.AUTO_CONNECT:
-        return get_value_from_push_auto_connect(obj, reader, attribute)
+        return get_value_from_auto_connect(obj, reader, attribute)
+    elif obj.getObjectType() == ObjectType.ACTION_SCHEDULE:
+        return get_value_from_action_schedule(obj, reader, attribute)
     else:
         return reader.read(obj, int(attribute))
 
@@ -48,9 +50,12 @@ def get_value_from_data(obj, reader, attribute):
         hour = res[5]
         minute = res[6]
         second = res[7]
-        # переносим в тип datetime для сравнения
-        value = datetime.strptime(f'{day}/{month}/{year} {hour}:{minute}:{second}',
-                                  "%d/%m/%Y %H:%M:%S").strftime("%d.%m.%Y %H:%M:%S")  # нулевые не обрабатывает
+        if year == 0:
+            value = "НУЛЕВАЯ ЗАПИСЬ"
+        else:
+            # переносим в тип datetime для сравнения
+            value = datetime.strptime(f'{day}/{month}/{year} {hour}:{minute}:{second}',
+                                      "%d/%m/%Y %H:%M:%S").strftime("%d.%m.%Y %H:%M:%S")  # нулевые не обрабатывает
     elif obj.logicalName == '0.0.96.5.135.255' and attribute == '2':
         last_event_for_push = reader.read(obj, 2)
 
@@ -239,7 +244,7 @@ def get_value_from_push_setup(obj, reader, attribute):
     return value
 
 
-def get_value_from_push_auto_connect(obj, reader, attribute):
+def get_value_from_auto_connect(obj, reader, attribute):
     if attribute == '1':
         value = f'logicalName = {reader.read(obj, int(attribute))}'
     elif attribute == '2':
@@ -254,7 +259,15 @@ def get_value_from_push_auto_connect(obj, reader, attribute):
         value = f'Repetition Delay = {temp}'
     elif attribute == '5':
         temp = reader.read(obj, int(attribute))
-        value = f'Calling Window = {temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S"), temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")}' # при пустом возвращает ошибку list index out...
+        if len(temp) != 0:
+            value = f'Calling Window = {temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S"), temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")}' # при пустом возвращает ошибку list index out...
+        else:
+            value = 'НЕТ ЗАПИСЕЙ'
     elif attribute == '6':
         value = f'Destinations = {reader.read(obj, int(attribute))}'
+    return value
+
+
+def get_value_from_action_schedule(obj, reader, attribute):
+    value = reader.read(obj, int(attribute))
     return value
