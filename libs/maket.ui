@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>550</width>
-    <height>672</height>
+    <width>631</width>
+    <height>641</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -36,7 +36,7 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>531</width>
+     <width>611</width>
      <height>61</height>
     </rect>
    </property>
@@ -48,7 +48,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>231</width>
+      <width>151</width>
       <height>31</height>
      </rect>
     </property>
@@ -71,19 +71,6 @@
      <string>Введите номер COM-port</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="read_collection">
-    <property name="geometry">
-     <rect>
-      <x>250</x>
-      <y>20</y>
-      <width>271</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Считать коллекцию</string>
-    </property>
-   </widget>
   </widget>
   <widget class="QTextEdit" name="textEdit">
    <property name="enabled">
@@ -93,8 +80,8 @@
     <rect>
      <x>10</x>
      <y>410</y>
-     <width>531</width>
-     <height>251</height>
+     <width>611</width>
+     <height>221</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -118,7 +105,7 @@
     <rect>
      <x>10</x>
      <y>80</y>
-     <width>531</width>
+     <width>611</width>
      <height>101</height>
     </rect>
    </property>
@@ -128,9 +115,9 @@
    <widget class="QComboBox" name="obis">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>140</x>
       <y>20</y>
-      <width>431</width>
+      <width>381</width>
       <height>31</height>
      </rect>
     </property>
@@ -144,7 +131,7 @@
    <widget class="QComboBox" name="attr">
     <property name="geometry">
      <rect>
-      <x>450</x>
+      <x>530</x>
       <y>20</y>
       <width>71</width>
       <height>31</height>
@@ -162,7 +149,7 @@
      <rect>
       <x>10</x>
       <y>60</y>
-      <width>251</width>
+      <width>311</width>
       <height>31</height>
      </rect>
     </property>
@@ -173,14 +160,42 @@
    <widget class="QPushButton" name="add_attribute">
     <property name="geometry">
      <rect>
-      <x>270</x>
+      <x>330</x>
       <y>60</y>
-      <width>251</width>
+      <width>271</width>
       <height>31</height>
      </rect>
     </property>
     <property name="text">
      <string>Добавить атрибут для записи</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="search">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>121</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="maxLength">
+     <number>30</number>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+    </property>
+    <property name="dragEnabled">
+     <bool>false</bool>
+    </property>
+    <property name="readOnly">
+     <bool>false</bool>
+    </property>
+    <property name="placeholderText">
+     <string>Поиск</string>
     </property>
    </widget>
   </widget>
@@ -189,7 +204,7 @@
     <rect>
      <x>10</x>
      <y>370</y>
-     <width>531</width>
+     <width>611</width>
      <height>31</height>
     </rect>
    </property>
@@ -205,7 +220,7 @@
     <rect>
      <x>10</x>
      <y>190</y>
-     <width>531</width>
+     <width>611</width>
      <height>171</height>
     </rect>
    </property>
@@ -220,7 +235,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>511</width>
+      <width>591</width>
       <height>100</height>
      </rect>
     </property>
@@ -242,7 +257,7 @@
      <rect>
       <x>10</x>
       <y>130</y>
-      <width>251</width>
+      <width>311</width>
       <height>31</height>
      </rect>
     </property>
@@ -253,9 +268,9 @@
    <widget class="QPushButton" name="delete_all">
     <property name="geometry">
      <rect>
-      <x>270</x>
+      <x>330</x>
       <y>130</y>
-      <width>251</width>
+      <width>271</width>
       <height>31</height>
      </rect>
     </property>

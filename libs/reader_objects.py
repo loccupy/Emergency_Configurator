@@ -29,12 +29,12 @@ def get_value_from_data(obj, reader, attribute):
     if obj.logicalName in ['0.0.42.0.0.255', '0.0.96.1.0.255', '0.0.96.1.1.255', '0.0.96.1.2.255', '0.0.96.1.3.255',
                            '0.0.96.1.4.255', '0.0.96.1.6.255', '0.0.96.1.8.255', '0.0.96.1.9.255'] and attribute == '2':
         value = reader.read(obj, int(attribute)).decode()
-    elif obj.logicalName == '0.0.0.9.2.255':
+    elif obj.logicalName == '0.0.0.9.2.255' and attribute == '2':
         value = reader.read(obj, int(attribute)).value.strftime('%d.%m.%Y')
     elif obj.logicalName in ['0.0.96.2.1.255', '0.0.96.2.5.255', '0.0.96.2.7.255', '0.0.96.2.12.255',
                              '0.0.96.2.13.255', '0.0.96.20.1.255', '0.0.96.20.6.255', '0.0.96.20.16.255',
                              '0.0.96.50.1.255', '0.0.96.50.11.255', '0.0.96.50.6.255', '0.0.96.50.26.255',
-                             '0.0.96.50.31.255']:
+                             '0.0.96.50.31.255'] and attribute == '2':
         res = reader.read(obj, int(attribute))
         he = f'{hex(res[0])[2:]}{hex(res[1])[2:]}'
         year = int(he, 16)
@@ -44,8 +44,9 @@ def get_value_from_data(obj, reader, attribute):
         minute = res[6]
         second = res[7]
         # переносим в тип datetime для сравнения
-        value = datetime.strptime(f'{month}/{day}/{year} {hour}:{minute}:{second}', "%m/%d/%Y %H:%M:%S")  # нулевые не обрабатывает
-    elif obj.logicalName == '0.0.96.5.135.255':
+        value = datetime.strptime(f'{day}/{month}/{year} {hour}:{minute}:{second}',
+                                  "%d/%m/%Y %H:%M:%S").strftime("%d.%m.%Y %H:%M:%S")  # нулевые не обрабатывает
+    elif obj.logicalName == '0.0.96.5.135.255' and attribute == '2':
         last_event_for_push = reader.read(obj, 2)
 
         n_1 = str(last_event_for_push[0][0])
