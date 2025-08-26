@@ -1,7 +1,10 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
-from gurux_dlms.enums import ObjectType, DataType
-from gurux_dlms.objects import GXDLMSActionItem
+from gurux_dlms import GXUInt16, GXUInt8, GXDateTime
+from gurux_dlms.enums import ObjectType, DataType, Unit
+from gurux_dlms.objects import GXDLMSActionItem, GXDLMSPushSetup, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister
+from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode
 
 
 def read_obj(obj, reader, attribute):
@@ -21,6 +24,8 @@ def read_obj(obj, reader, attribute):
         return get_value_from_disconnect_control(obj, reader, attribute)
     elif obj.getObjectType() == ObjectType.PUSH_SETUP:
         return get_value_from_push_setup(obj, reader, attribute)
+    elif obj.getObjectType() == ObjectType.AUTO_CONNECT:
+        return get_value_from_push_auto_connect(obj, reader, attribute)
     else:
         return reader.read(obj, int(attribute))
 
@@ -63,7 +68,18 @@ def get_value_from_data(obj, reader, attribute):
 
 
 def get_value_from_register(obj, reader, attribute):
-    value = reader.read(obj, int(attribute))
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        scaler = reader.read(obj, 3)[0]
+        value = f'value = {temp*scaler}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        member = Unit(temp[1])
+        value = f'scaler = {temp[0]}, Unit = {member.name}'
+    else:
+        raise Exception('Атрибут не удалось считать')
     return value
 
 
@@ -73,29 +89,172 @@ def get_value_from_gprs(obj, reader, attribute):
 
 
 def get_value_from_clock(obj, reader, attribute):
-    value = reader.read(obj, int(attribute))
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute)).value.strftime("%d.%m.%Y %H:%M:%S")
+        value = f'time = {temp}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = f'timeZone = {temp}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        value = f'status = {temp}'
+    elif attribute == '5':
+        value = f'begin = {reader.read(obj, int(attribute)).value.strftime("%d.%m.%Y %H:%M:%S")}'
+    elif attribute == '6':
+        value = f'end  = {reader.read(obj, int(attribute)).value.strftime("%d.%m.%Y %H:%M:%S")}'
+    elif attribute == '7':
+        temp = reader.read(obj, int(attribute))
+        value = f'deviation = {temp}'
+    elif attribute == '8':
+        temp = reader.read(obj, int(attribute))
+        value = f'enabled = {temp}'
+    elif attribute == '9':
+        temp = reader.read(obj, int(attribute))
+        member = ClockBase(temp)
+        value = f'clockBase = {member.name}'
+    else:
+        raise Exception('Атрибут не удалось считать')
     return value
 
 
 def get_value_from_iec_hdlc_setup(obj, reader, attribute):
-    value = reader.read(obj, int(attribute))
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        member = BaudRate(temp)
+        value = f'communicationSpeed = {member.name}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = f'windowSizeTransmit = {temp}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        value = f'windowSizeReceive = {temp}'
+    elif attribute == '5':
+        value = f'maximumInfoLengthReceive = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'maximumInfoLengthTransmit  = {reader.read(obj, int(attribute))}'
+    elif attribute == '7':
+        temp = reader.read(obj, int(attribute))
+        value = f'interCharachterTimeout = {temp}'
+    elif attribute == '8':
+        temp = reader.read(obj, int(attribute))
+        value = f'inactivityTimeout = {temp}'
+    elif attribute == '9':
+        temp = reader.read(obj, int(attribute))
+        value = f'deviceAddress = {temp}'
+    else:
+        raise Exception('Атрибут не удалось считать')
     return value
 
 
 def get_value_from_limiter(obj, reader, attribute):
-    if attribute == '11':
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'monitoredValue  = {reader.read(obj, int(attribute))}' #  monitoredValue  = None
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = f'thresholdActive = {temp}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        value = f'thresholdNormal = {temp}'
+    elif attribute == '5':
+        value = f'thresholdEmergency = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'minOverThresholdDuration  = {reader.read(obj, int(attribute))}'
+    elif attribute == '7':
+        temp = reader.read(obj, int(attribute))
+        value = f'minUnderThresholdDuration = {temp}'
+    elif attribute == '8':
+        temp = reader.read(obj, int(attribute))
+        value = f'emergencyProfile = {temp}'
+    elif attribute == '9':
+        temp = reader.read(obj, int(attribute))
+        value = f'emergencyProfileGroupIDs = {temp}'
+    elif attribute == '10':
+        temp = reader.read(obj, int(attribute))
+        value = f'emergencyProfileActive = {temp}'
+    elif attribute == '11':
         value = reader.read(obj, int(attribute))
-        value = [f'{value[0].logicalName}: {value[0].scriptSelector}', f'{value[1].logicalName}: {value[1].scriptSelector}']
+        value = f'[actionOverThreshold, actionUnderThreshold] = [{value[0].logicalName}: {value[0].scriptSelector}, {value[1].logicalName}: {value[1].scriptSelector}]'
     else:
-        value = reader.read(obj, int(attribute))
+        raise Exception('Атрибут не удалось считать')
     return value
 
 
 def get_value_from_disconnect_control(obj, reader, attribute):
     value = reader.read(obj, int(attribute))
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'outputState  = {reader.read(obj, int(attribute))}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        member = ControlState(temp)
+        value = f'controlState = {member.name}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        member = ControlMode(temp)
+        value = f'controlMode = {member.name}'
+    else:
+        raise Exception('Атрибут не удалось считать')
     return value
 
 
+# здесь могут возникнуть проблемы с объектом GXDLMSPushSetup по причине разной реализации в нашей и базовой библ-ах
 def get_value_from_push_setup(obj, reader, attribute):
-    value = reader.read(obj, int(attribute))
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'pushObjectList = {[i[0].logicalName for i in reader.read(obj, int(attribute))]}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = f'(service, destination, message) = service: {temp[0]}, destination: {temp[1]}, message: {temp[2]}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        value = f'communicationWindow = {temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S"), temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")}'
+    elif attribute == '5':
+        value = f'randomisationStartInterval = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'numberOfRetries = {reader.read(obj, int(attribute))}'
+    elif attribute == '7': #  здесь может ругаться на GXUInt16
+        value = f'repetitionDelay = {reader.read(obj, int(attribute))}'
+    elif attribute == '8':
+        value = f'pushInterface = {reader.read(obj, int(attribute))}'
+    elif attribute == '9':
+        value = f'clientAddress = {reader.read(obj, int(attribute))}'
+    elif attribute == '10':
+        f'??? = {reader.read(obj, int(attribute))}'
+    elif attribute == '11':
+        value = f'methodOfConfirmation = {reader.read(obj, int(attribute))}'
+    elif attribute == '12':
+        f'??? = {reader.read(obj, int(attribute))}'
+    elif attribute == '13':
+        value = f'lastConfirmation = {reader.read(obj, int(attribute))}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_push_auto_connect(obj, reader, attribute):
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        member = AutoConnectMode(temp)
+        value = f'Mode = {member.name}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = f'Repetitions = {temp}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        value = f'Repetition Delay = {temp}'
+    elif attribute == '5':
+        temp = reader.read(obj, int(attribute))
+        value = f'Calling Window = {temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S"), temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")}' # при пустом возвращает ошибку list index out...
+    elif attribute == '6':
+        value = f'Destinations = {reader.read(obj, int(attribute))}'
     return value

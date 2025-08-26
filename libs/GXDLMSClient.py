@@ -49,7 +49,7 @@ class GXDLMSClient(object):
     def __init__(self, useLogicalNameReferencing=True, clientAddress=16, serverAddress=1,
                  forAuthentication=Authentication.NONE, password=None, interfaceType=InterfaceType.HDLC):
         # DLMS settings.
-        self.settings = GXDLMSSettings(False)
+        self.settings = GXDLMSSettings(False, None)
         self.manufacturerId = None
         self.settings.setUseLogicalNameReferencing(useLogicalNameReferencing)
         self.clientAddress = clientAddress
@@ -814,7 +814,7 @@ class GXDLMSClient(object):
 
     @classmethod
     def getValue(cls, data, useUtc):
-        settings = GXDLMSSettings(False)
+        settings = GXDLMSSettings(False, None)
         settings.useUtc2NormalTime = useUtc
         info = _GXDataInfo()
         return _GXCommon.getData(settings, data, info)
@@ -829,7 +829,7 @@ class GXDLMSClient(object):
 
     @classmethod
     def changeType(cls, value, type_, useUtc=False):
-        settings = GXDLMSSettings(False)
+        settings = GXDLMSSettings(False, None)
         settings.useUtc2NormalTime = useUtc
         return _GXCommon.changeType(settings, value, type_)
 

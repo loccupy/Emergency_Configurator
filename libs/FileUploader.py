@@ -68,7 +68,10 @@ class InputDialog(QDialog):
 class FileUploader(QWidget):
     def __init__(self):
         super().__init__()
+        self.attribute = None
         self.objects_list = None
+        self.completer_model = QStringListModel()
+        self.proxy_model = QSortFilterProxyModel()
         self.initUI()
 
     def initUI(self):
@@ -125,8 +128,8 @@ class FileUploader(QWidget):
         self.update_attributes_display()
 
         # Устанавливаем модель для QComboBox, чтобы можно было фильтровать
-        self.completer_model = QStringListModel()
-        self.proxy_model = QSortFilterProxyModel()
+        # self.completer_model = QStringListModel()
+        # self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setSourceModel(self.completer_model)
 
         self.obises.setModel(self.proxy_model)
@@ -378,7 +381,7 @@ class FileUploader(QWidget):
 
             value = read_obj(temp_object, reader, attribute) # если значение невозможно преобразовать в строку, возвращает ошибку - надо доработать
 
-            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >>', value)
+            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >> ', value)
 
             reader.close()
             print("Соединение разорвано\n")
