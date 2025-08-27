@@ -3,31 +3,61 @@ from zoneinfo import ZoneInfo
 
 from gurux_dlms import GXUInt16, GXUInt8, GXDateTime
 from gurux_dlms.enums import ObjectType, DataType, Unit
-from gurux_dlms.objects import GXDLMSActionItem, GXDLMSPushSetup, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister
-from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode
+from gurux_dlms.objects import GXDLMSActionItem, GXDLMSPushSetup, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister, \
+    GXDLMSActionSchedule, GXDLMSSpecialDay, GXDLMSScript, GXDLMSScriptAction, GXDLMSSeasonProfile, GXDLMSWeekProfile, \
+    GXDLMSDayProfile, GXDLMSDayProfileAction, GXDLMSGSMDiagnostic, GXDLMSGSMCellInfo, GXAdjacentCell
+from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode, \
+    SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus
 
 
 def read_obj(obj, reader, attribute):
     if obj.getObjectType() == ObjectType.DATA:
         return get_value_from_data(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.REGISTER:
         return get_value_from_register(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.GPRS_SETUP:
         return get_value_from_gprs(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.CLOCK:
         return get_value_from_clock(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.IEC_HDLC_SETUP:
         return get_value_from_iec_hdlc_setup(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.LIMITER:
         return get_value_from_limiter(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.DISCONNECT_CONTROL:
         return get_value_from_disconnect_control(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.PUSH_SETUP:
         return get_value_from_push_setup(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.AUTO_CONNECT:
         return get_value_from_auto_connect(obj, reader, attribute)
+
     elif obj.getObjectType() == ObjectType.ACTION_SCHEDULE:
         return get_value_from_action_schedule(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.SPECIAL_DAYS_TABLE:
+        return get_value_from_special_days_table(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.SCRIPT_TABLE:
+        return get_value_from_script_table(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.ACTIVITY_CALENDAR:
+        return get_value_from_activity_calendar(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.TCP_UDP_SETUP:
+        return get_value_from_tcp_udp_setup(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.IP4_SETUP:
+        return get_value_from_ip4_setup(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.GSM_DIAGNOSTIC:
+        return get_value_from_gsm_diagnostic(obj, reader, attribute)
     else:
         return reader.read(obj, int(attribute))
 
@@ -78,7 +108,7 @@ def get_value_from_register(obj, reader, attribute):
     elif attribute == '2':
         temp = reader.read(obj, int(attribute))
         scaler = reader.read(obj, 3)[0]
-        value = f'value = {temp*scaler}'
+        value = f'value = {temp * scaler}'
     elif attribute == '3':
         temp = reader.read(obj, int(attribute))
         member = Unit(temp[1])
@@ -159,7 +189,7 @@ def get_value_from_limiter(obj, reader, attribute):
     if attribute == '1':
         value = f'logicalName = {reader.read(obj, int(attribute))}'
     elif attribute == '2':
-        value = f'monitoredValue  = {reader.read(obj, int(attribute))}' #  monitoredValue  = None
+        value = f'monitoredValue  = {reader.read(obj, int(attribute))}'  #  monitoredValue  = None
     elif attribute == '3':
         temp = reader.read(obj, int(attribute))
         value = f'thresholdActive = {temp}'
@@ -191,7 +221,6 @@ def get_value_from_limiter(obj, reader, attribute):
 
 
 def get_value_from_disconnect_control(obj, reader, attribute):
-    value = reader.read(obj, int(attribute))
     if attribute == '1':
         value = f'logicalName = {reader.read(obj, int(attribute))}'
     elif attribute == '2':
@@ -225,7 +254,7 @@ def get_value_from_push_setup(obj, reader, attribute):
         value = f'randomisationStartInterval = {reader.read(obj, int(attribute))}'
     elif attribute == '6':
         value = f'numberOfRetries = {reader.read(obj, int(attribute))}'
-    elif attribute == '7': #  здесь может ругаться на GXUInt16
+    elif attribute == '7':  #  здесь может ругаться на GXUInt16
         value = f'repetitionDelay = {reader.read(obj, int(attribute))}'
     elif attribute == '8':
         value = f'pushInterface = {reader.read(obj, int(attribute))}'
@@ -245,6 +274,7 @@ def get_value_from_push_setup(obj, reader, attribute):
 
 
 def get_value_from_auto_connect(obj, reader, attribute):
+    value = ''
     if attribute == '1':
         value = f'logicalName = {reader.read(obj, int(attribute))}'
     elif attribute == '2':
@@ -260,14 +290,218 @@ def get_value_from_auto_connect(obj, reader, attribute):
     elif attribute == '5':
         temp = reader.read(obj, int(attribute))
         if len(temp) != 0:
-            value = f'Calling Window = {temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S"), temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")}' # при пустом возвращает ошибку list index out...
+            for i, obj in enumerate(temp):
+                value += str(f'Calling Window №{i} = ' + ''.join(
+                    f'start: {obj[0].value.strftime("%d.%m.%Y %H:%M:%S")}, end: {obj[1].value.strftime("%d.%m.%Y %H:%M:%S")} \n'))
         else:
-            value = 'НЕТ ЗАПИСЕЙ'
+            value = "НЕТ ЗАПИСЕЙ"
     elif attribute == '6':
         value = f'Destinations = {reader.read(obj, int(attribute))}'
+    else:
+        raise Exception('Атрибут не удалось считать')
     return value
 
 
 def get_value_from_action_schedule(obj, reader, attribute):
-    value = reader.read(obj, int(attribute))
+    value = ''
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        value = f'Executed Script Logical Name = logicalName: {temp[0]}, scriptSelector:{temp[1]}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        member = SingleActionScheduleType(temp)
+        value = f'Type = {member.name}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Execution Time №{i} = ' + ''.join(f'{obj.value.strftime("%d.%m.%Y %H:%M:%S")} \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_special_days_table(obj, reader, attribute):
+    value = ''
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Entries №{i} = ' + ''.join(
+                    f'index: {obj.index}, day: {obj.date.value.strftime("%d.%m.%Y")}, dayId: {obj.dayId} \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_script_table(obj, reader, attribute):
+    value = ''
+    if attribute == '1':
+        value = f'logicalName = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Script №{i} = ' + ''.join(f'id: {obj.id},'
+                                                          f' actions: [target:{obj.actions[0].target},'
+                                                          f' index:{obj.actions[0].index}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_activity_calendar(obj, reader, attribute):
+    value = ''
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'Active Calendar Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Active Season Profile №{i} = ' + ''.join(f'[name: {obj.name.decode()},'
+                                                                        f' start: {obj.start.value.strftime("%d.%m.%Y %H:%M:%S")},'
+                                                                        f' weekName: {obj.weekName.decode()}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Active Week Profile Table №{i} = ' + ''.join(f'[name: {obj.name.decode()},'
+                         f' week:{obj.monday, obj.tuesday, obj.wednesday, obj.thursday, obj.friday, obj.saturday, obj.sunday}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    elif attribute == '5':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Active Day Profile Table №{i} = ' + ''.join(f'[dayId: {obj.dayId},'
+                         f' daySchedules:{[(i.startTime.value.strftime("%H:%M:%S"), i.scriptLogicalName, i.scriptSelector) for i in obj.daySchedules]}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+        # value = f'Active Day Profile Table = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'Passive Calendar Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '7':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Passive Season Profile №{i} = ' + ''.join(f'[name: {obj.name.decode()},'
+                                                                        f' start: {obj.start.value.strftime("%d.%m.%Y %H:%M:%S")},'
+                                                                        f' weekName: {obj.weekName.decode()}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    elif attribute == '8':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Passive Week Profile Table №{i} = ' + ''.join(f'[name: {obj.name.decode()},'
+                         f' week:{obj.monday, obj.tuesday, obj.wednesday, obj.thursday, obj.friday, obj.saturday, obj.sunday}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    elif attribute == '9':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Passive Day Profile Table №{i} = ' + ''.join(f'[dayId: {obj.dayId},'
+                         f' daySchedules:{[(i.startTime.value.strftime("%H:%M:%S"), i.scriptLogicalName, i.scriptSelector) for i in obj.daySchedules]}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    elif attribute == '10':
+         value = f'Time = {reader.read(obj, int(attribute)).value.strftime("%d.%m.%Y %H:%M:%S")}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_tcp_udp_setup(obj, reader, attribute):
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'Port = {reader.read(obj, int(attribute))}'
+    elif attribute == '3':
+        value = f'IP Reference = {reader.read(obj, int(attribute))}'
+    elif attribute == '4':
+        value = f'Maximum Segment Size = {reader.read(obj, int(attribute))}'
+    elif attribute == '5':
+        value = f'Maximum Simultaneous Connections = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'Inactivity Timeout = {reader.read(obj, int(attribute))}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_ip4_setup(obj, reader, attribute):
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'Data LinkLayer Reference = {reader.read(obj, int(attribute))}'
+    elif attribute == '3':
+        value = f'IP Address = {reader.read(obj, int(attribute))}'
+    elif attribute == '4':
+        value = f'Multicast IP Address = {reader.read(obj, int(attribute))}'
+    elif attribute == '5':
+        value = f'IP Options = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'Subnet Mask = {reader.read(obj, int(attribute))}'
+    elif attribute == '7':
+        value = f'Gateway IP Address = {reader.read(obj, int(attribute))}'
+    elif attribute == '8':
+        value = f'Use DHCP = {reader.read(obj, int(attribute))}'
+    elif attribute == '9':
+        value = f'Primary DNS Address = {reader.read(obj, int(attribute))}'
+    elif attribute == '10':
+        value = f'Secondary DNS Address = {reader.read(obj, int(attribute))}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_gsm_diagnostic(obj, reader, attribute):
+    value = ''
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        value = f'Operator = {reader.read(obj, int(attribute))}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        member = GsmStatus(temp)
+        value = f'Status = {member.name}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        member = GsmCircuitSwitchStatus(temp)
+        value = f'CircuitSwitchStatus = {member.name}'
+    elif attribute == '5':
+        temp = reader.read(obj, int(attribute))
+        member = GsmPacketSwitchStatus(temp)
+        value = f'PacketSwitchStatus = {member.name}'
+    elif attribute == '6':
+        obj.version = 0
+        temp = reader.read(obj, 6)
+        value = f'CellInfo = {temp.cellId, temp.ber, temp.locationId, temp.signalQuality, temp.mobileCountryCode, temp.mobileNetworkCode, temp.channelNumber}'
+    elif attribute == '7':
+        temp = reader.read(obj, int(attribute))
+        if len(temp) != 0:
+            for i, obj in enumerate(temp):
+                value += str(f'Passive Day Profile Table №{i} = ' + ''.join(f'[cellId: {obj.cellId},'
+                         f' signalQuality:{obj.signalQuality}] \n'))
+        else:
+            value = "НЕТ ЗАПИСЕЙ"
+    elif attribute == '8':
+        value = f'CaptureTime = {reader.read(obj, int(attribute)).value.strftime("%d.%m.%Y %H:%M:%S")}'
+    else:
+        raise Exception('Атрибут не удалось считать')
     return value

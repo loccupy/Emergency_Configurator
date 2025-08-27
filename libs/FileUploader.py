@@ -353,6 +353,15 @@ class FileUploader(QWidget):
                 print(e)
 
     def read_param(self):
+        if not self.obises.currentText().strip():
+            # Показываем предупреждение
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Отсутствует значение в поле OBIS!",
+                QMessageBox.Ok
+            )
+            return
         obis = self.obises.currentText().split()[0]
         attribute = self.attribute.currentText()
         temp_object = None
@@ -381,7 +390,7 @@ class FileUploader(QWidget):
 
             value = read_obj(temp_object, reader, attribute) # если значение невозможно преобразовать в строку, возвращает ошибку - надо доработать
 
-            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >> ', value)
+            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >> \n{value}')
 
             reader.close()
             print("Соединение разорвано\n")
