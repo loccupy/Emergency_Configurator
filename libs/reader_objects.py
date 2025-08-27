@@ -9,6 +9,9 @@ from gurux_dlms.objects import GXDLMSActionItem, GXDLMSPushSetup, GXDLMSClock, G
 from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode, \
     SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus
 
+from libs.ProtectionMode import ProtectionMode
+from libs.ProtectionStatus import ProtectionStatus
+
 
 def read_obj(obj, reader, attribute):
     if obj.getObjectType() == ObjectType.DATA:
@@ -58,6 +61,9 @@ def read_obj(obj, reader, attribute):
 
     elif obj.getObjectType() == ObjectType.GSM_DIAGNOSTIC:
         return get_value_from_gsm_diagnostic(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.COMMUNICATION_PORT_PROTECTION:
+        return get_value_from_communication_port_protection(obj, reader, attribute)
     else:
         return reader.read(obj, int(attribute))
 
@@ -502,6 +508,48 @@ def get_value_from_gsm_diagnostic(obj, reader, attribute):
             value = "НЕТ ЗАПИСЕЙ"
     elif attribute == '8':
         value = f'CaptureTime = {reader.read(obj, int(attribute)).value.strftime("%d.%m.%Y %H:%M:%S")}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_communication_port_protection(obj, reader, attribute):
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        member = ProtectionMode(temp)
+        value = f'Protection mode = {member.name}'
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = f'Allowed failed attempts = {temp}'
+    elif attribute == '4':
+        temp = reader.read(obj, int(attribute))
+        value = f'Initial lockout time = {temp}'
+    elif attribute == '5':
+        value = f'Steepness factor = {reader.read(obj, int(attribute))}'
+    elif attribute == '6':
+        value = f'Max lockout time  = {reader.read(obj, int(attribute))}'
+    elif attribute == '7':
+        temp = reader.read(obj, int(attribute))
+        n_1 = str(temp[0])
+        n_2 = str(temp[1])
+        n_3 = str(temp[2])
+        n_4 = str(temp[3])
+        n_5 = str(temp[4])
+        n_6 = str(temp[5])
+
+        value = f'Port = {n_1 + '.' + n_2 + '.' + n_3 + '.' + n_4 + '.' + n_5 + '.' + n_6}'
+    elif attribute == '8':
+        temp = reader.read(obj, int(attribute))
+        member = ProtectionStatus(temp)
+        value = f'Protection status = {member.name}'
+    elif attribute == '9':
+        temp = reader.read(obj, int(attribute))
+        value = f'Failed attempts = {temp}'
+    elif attribute == '10':
+        temp = reader.read(obj, int(attribute))
+        value = f'Cumulative failed attempts = {temp}'
     else:
         raise Exception('Атрибут не удалось считать')
     return value

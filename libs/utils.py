@@ -4,6 +4,7 @@ from gurux_dlms.objects import GXDLMSAssociationLogicalName, GXDLMSData, GXDLMSR
     GXDLMSAutoConnect, GXDLMSPushSetup, GXDLMSTcpUdpSetup, GXDLMSIp4Setup, GXDLMSGprsSetup, GXDLMSGSMDiagnostic, \
     GXDLMSSecuritySetup, GXDLMSDisconnectControl, GXDLMSLimiter
 
+from libs.GXDLMSCommunicationPortProtection import GXDLMSCommunicationPortProtection
 # from libs.GXDLMSCommunicationPortProtection import GXDLMSCommunicationPortProtection
 from libs.connect import connect
 
@@ -82,7 +83,7 @@ def parse_data_type(obis, data_type):
         case 71:
             return GXDLMSLimiter(obis)
         case 124:
-            return GXDLMSLimiter(obis)
+            return GXDLMSCommunicationPortProtection(obis)
         case _:
             raise Exception(f'Класс с типом {data_type} не идентифицирован!!')
 

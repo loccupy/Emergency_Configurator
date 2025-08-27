@@ -2,22 +2,28 @@ from gurux_dlms.enums import ErrorCode, ObjectType, DataType
 from gurux_dlms.internal._GXCommon import _GXCommon
 from gurux_dlms.objects.GXDLMSObject import GXDLMSObject
 from gurux_dlms.objects.IGXDLMSBase import IGXDLMSBase
-from libs import ProtectionMode, ProtectionStatus
+from libs.ProtectionMode import ProtectionMode
+from libs.ProtectionStatus import ProtectionStatus
 
 
 class GXDLMSCommunicationPortProtection(GXDLMSObject, IGXDLMSBase):
 
     def __init__(self, ln='0.0.44.2.0.255', sn=0):
         GXDLMSObject.__init__(self, ObjectType.COMMUNICATION_PORT_PROTECTION, ln, sn)
-        self.protectionMode = ProtectionMode.ProtectionMode.COM_PORT_MODE_UNLOCKED
+        self.protectionMode = ProtectionMode.COM_PORT_MODE_UNLOCKED
         self.allowedFailedAttempts = 3
         self.initialLockoutTime = 30
         self.steepnessFactor = 1
         self.maxLockoutTime = 43200
         self.port = None
-        self.protectionStatus = ProtectionStatus.ProtectionStatus.COM_PORT_STATUS_UNLOCKED
+        self.protectionStatus = ProtectionStatus.COM_PORT_STATUS_UNLOCKED
         self.failedAttempts = 0
         self.cumulativeFailedAttempts = 0
+
+    def getNames(self):
+        if self.shortName != 0:
+            return self.shortName
+        return self.logicalName
 
     def getValues(self):
         return [self.logicalName,
