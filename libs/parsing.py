@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from gurux_dlms import GXUInt8, GXUInt16, GXStructure, GXUInt32
+from gurux_dlms import GXUInt8, GXUInt16, GXStructure, GXUInt32, GXDateTime
 from gurux_dlms.enums import DataType
 
 def parse_data_object_for_write(obj, reader, value, attribute):
@@ -55,3 +55,38 @@ def parse_data_object_for_write(obj, reader, value, attribute):
         return obj
     else:
         raise NotImplementedError('Пока этот объект не обрабатывается!!!')
+
+
+def parse_clock_object_for_write(obj, reader, value, attribute):
+    try:
+        if attribute == '2':
+            obj.time = datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
+        elif attribute == '3':
+            obj.timeZone = int(value)
+        elif attribute == '5':
+            if reader.read(obj, 8):
+                obj.begin = datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
+            else:
+                raise Exception('Сначала надо включить девиацию!!')
+        elif attribute == '6':
+            if reader.read(obj, 8):
+                obj.end = datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
+            else:
+                raise Exception('Сначала надо включить девиацию!!')
+        elif attribute == '7':
+            if reader.read(obj, 8):
+                obj.deviation = int(value)
+            else:
+                raise Exception('Сначала надо включить девиацию!!')
+        elif attribute == '8':
+            if value == 'True':
+                obj.enabled = True
+            elif value == 'False':
+                obj.enabled = False
+            else:
+                raise Exception('Только True или False!!!')
+        else:
+            raise Exception('Данный атрибут недоступен для записи!!!')
+        return obj
+    except Exception as e:
+        raise

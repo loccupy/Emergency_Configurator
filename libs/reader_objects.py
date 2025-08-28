@@ -5,14 +5,16 @@ from gurux_dlms import GXUInt16, GXUInt8, GXDateTime
 from gurux_dlms.enums import ObjectType, DataType, Unit
 from gurux_dlms.objects import GXDLMSActionItem, GXDLMSPushSetup, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister, \
     GXDLMSActionSchedule, GXDLMSSpecialDay, GXDLMSScript, GXDLMSScriptAction, GXDLMSSeasonProfile, GXDLMSWeekProfile, \
-    GXDLMSDayProfile, GXDLMSDayProfileAction, GXDLMSGSMDiagnostic, GXDLMSGSMCellInfo, GXAdjacentCell
+    GXDLMSDayProfile, GXDLMSDayProfileAction, GXDLMSGSMDiagnostic, GXDLMSGSMCellInfo, GXAdjacentCell, \
+    GXDLMSObjectDefinition
 from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode, \
-    SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus
+    SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus, SortMethod
 
 from libs.ProtectionMode import ProtectionMode
 from libs.ProtectionStatus import ProtectionStatus
+# from libs.parsing import parse_buffer_for_read_from_profile_generic
 
-
+# Все кроме ImageTranser, ecuritySetup и AssociationLogicalName (всего 7 объектов для 1ф)
 def read_obj(obj, reader, attribute):
     if obj.getObjectType() == ObjectType.DATA:
         return get_value_from_data(obj, reader, attribute)
@@ -64,6 +66,12 @@ def read_obj(obj, reader, attribute):
 
     elif obj.getObjectType() == ObjectType.COMMUNICATION_PORT_PROTECTION:
         return get_value_from_communication_port_protection(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.PROFILE_GENERIC:
+        return get_value_from_profile_generic(obj, reader, attribute)
+
+    elif obj.getObjectType() == ObjectType.REGISTER_ACTIVATION:
+        return get_value_from_register_activation(obj, reader, attribute)
     else:
         return reader.read(obj, int(attribute))
 
@@ -550,6 +558,62 @@ def get_value_from_communication_port_protection(obj, reader, attribute):
     elif attribute == '10':
         temp = reader.read(obj, int(attribute))
         value = f'Cumulative failed attempts = {temp}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_profile_generic(obj, reader, attribute):
+    value = ''
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        if reader.read(obj, 7) != 0:
+            reader.read(obj, 3)
+            temp = reader.read(obj, 2)
+            value = 'Buffer = \n'
+            for i, obj in enumerate(temp):
+                value += str(f'Запись №{i + 1} = ' + ''.join(f'[Time: {obj[0].value.strftime("%d.%m.%Y %H:%M:%S")}....] \n'))
+        else:
+            value = 'НЕТ ЗАПИСЕЙ'
+    elif attribute == '3':
+        temp = reader.read(obj, 3)
+        value = 'CaptureObjects = \n'
+        for i, obj in enumerate(temp):
+            value += str(''.join(f'{obj[0]} \n'))
+    elif attribute == '4':
+        value = f'Capture Period = {reader.read(obj, int(attribute))}'
+    elif attribute == '5':
+        temp = reader.read(obj, int(attribute))
+        member = SortMethod(temp)
+        value = f'Sort Method = {member.name}'
+    elif attribute == '6':
+        value = f'Sort Object = {reader.read(obj, int(attribute))}'
+    elif attribute == '7':
+        value = f'Entries In Use = {reader.read(obj, int(attribute))}'
+    elif attribute == '8':
+        value = f'Profile Entries = {reader.read(obj, int(attribute))}'
+    else:
+        raise Exception('Атрибут не удалось считать')
+    return value
+
+
+def get_value_from_register_activation(obj, reader, attribute):
+    value = ''
+    if attribute == '1':
+        value = f'Logical Name = {reader.read(obj, int(attribute))}'
+    elif attribute == '2':
+        temp = reader.read(obj, int(attribute))
+        value = 'Register Assignment = \n'
+        for i, obj in enumerate(temp):
+            value += str(''.join(f'{obj.logicalName} \n'))
+    elif attribute == '3':
+        temp = reader.read(obj, int(attribute))
+        value = 'Mask List = \n'
+        for i, obj in enumerate(temp):
+            value += str(''.join(f'{obj[0].decode()} \n'))
+    elif attribute == '4':
+        value = f'Active Mask = {reader.read(obj, int(attribute)).decode()}'
     else:
         raise Exception('Атрибут не удалось считать')
     return value
