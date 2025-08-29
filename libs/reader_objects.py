@@ -14,6 +14,7 @@ from libs.ProtectionMode import ProtectionMode
 from libs.ProtectionStatus import ProtectionStatus
 # from libs.parsing import parse_buffer_for_read_from_profile_generic
 
+
 # Все кроме ImageTranser, ecuritySetup и AssociationLogicalName (всего 7 объектов для 1ф)
 def read_obj(obj, reader, attribute):
     if obj.getObjectType() == ObjectType.DATA:
@@ -331,7 +332,7 @@ def get_value_from_action_schedule(obj, reader, attribute):
         temp = reader.read(obj, int(attribute))
         if len(temp) != 0:
             for i, obj in enumerate(temp):
-                value += str(f'Execution Time №{i} = ' + ''.join(f'{obj.value.strftime("%d.%m.%Y %H:%M:%S")} \n'))
+                value += str(f'Execution Time №{i} = ' + ''.join(f'{obj.value.strftime("%d.%m.%Y %H:%M:%S")} \n')) # Вместо звездочек вписывает дефолтные значения бибилиотечные пидр
         else:
             value = "НЕТ ЗАПИСЕЙ"
     else:

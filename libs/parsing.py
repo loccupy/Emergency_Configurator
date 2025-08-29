@@ -7,9 +7,6 @@ from gurux_dlms.objects import GXDLMSHdlcSetup, GXDLMSCaptureObject, GXDLMSData,
     GXDLMSRegister, GXDLMSAutoConnect
 
 
-# from libs.GXDateTime import GXDateTime
-
-
 def parse_data_object_for_write(obj, reader, value, attribute):
     if obj.logicalName in ['0.0.128.1.0.255', '0.0.128.2.0.255']:
         value = re.sub(r'[^0-9,]', '', value).split(',')
@@ -98,57 +95,6 @@ def parse_clock_object_for_write(obj, reader, value, attribute):
         raise
 
 
-# def get_all_spodes_for_display(reader):
-#     device_type = reader.deviceType
-#     if device_type == '1PH':
-#         return "1.0.1.8.0.255 1.0.1.8.1.255 1.0.1.8.2.255 1.0.1.8.3.255 1.0.1.8.4.255 " \
-#                "1.0.2.8.0.255 1.0.2.8.1.255 1.0.2.8.2.255 1.0.2.8.3.255 1.0.2.8.4.255 " \
-#                "1.0.3.8.0.255 1.0.3.8.1.255 1.0.3.8.2.255 1.0.3.8.3.255 1.0.3.8.4.255 " \
-#                "1.0.4.8.0.255 1.0.4.8.1.255 1.0.4.8.2.255 1.0.4.8.3.255 1.0.4.8.4.255 " \
-#                "1.0.12.7.0.255 1.0.11.7.0.255 1.0.91.7.0.255 1.0.1.7.0.255 1.0.3.7.0.255 " \
-#                "1.0.9.7.0.255 1.0.13.7.0.255 1.0.14.7.0.255 1.0.1.8.0.101 " \
-#                "1.0.1.8.1.101 1.0.1.8.2.101 1.0.1.8.3.101 1.0.1.8.4.101 1.0.2.8.0.101 " \
-#                "1.0.2.8.1.101 1.0.2.8.2.101 1.0.2.8.3.101 1.0.2.8.4.101 1.0.3.8.0.101 " \
-#                "1.0.3.8.1.101 1.0.3.8.2.101 1.0.3.8.3.101 1.0.3.8.4.101 1.0.4.8.0.101 " \
-#                "1.0.4.8.1.101 1.0.4.8.2.101 1.0.4.8.3.101 1.0.4.8.4.101 0.0.22.0.0.255 " \
-#                "0.1.22.0.0.255 0.2.22.0.0.255 0.0.96.3.10.255 0.0.96.1.2.255 0.0.96.1.8.255 " \
-#                "0.0.96.4.3.255 0.0.96.1.0.255 0.0.0.9.1.255 0.0.0.9.2.255"
-#     elif device_type == '3PH':
-#         return "1.0.1.8.0.255 1.0.1.8.1.255 1.0.1.8.2.255 1.0.1.8.3.255 1.0.1.8.4.255 " \
-#                "1.0.2.8.0.255 1.0.2.8.1.255 1.0.2.8.2.255 1.0.2.8.3.255 1.0.2.8.4.255 " \
-#                "1.0.3.8.0.255 1.0.3.8.1.255 1.0.3.8.2.255 1.0.3.8.3.255 1.0.3.8.4.255 " \
-#                "1.0.4.8.0.255 1.0.4.8.1.255 1.0.4.8.2.255 1.0.4.8.3.255 1.0.4.8.4.255 " \
-#                "1.0.32.7.0.255 1.0.52.7.0.255 1.0.72.7.0.255 1.0.124.7.0.255 1.0.125.7.0.255 " \
-#                "1.0.126.7.0.255 1.0.91.7.0.255 1.0.31.7.0.255 1.0.51.7.0.255 1.0.71.7.0.255 " \
-#                "1.0.1.7.0.255 1.0.21.7.0.255 1.0.41.7.0.255 1.0.61.7.0.255 1.0.3.7.0.255 " \
-#                "1.0.23.7.0.255 1.0.43.7.0.255 1.0.63.7.0.255 1.0.9.7.0.255 1.0.29.7.0.255 " \
-#                "1.0.49.7.0.255 1.0.69.7.0.255 1.0.13.7.0.255 1.0.33.7.0.255 1.0.53.7.0.255 " \
-#                "1.0.73.7.0.255 1.0.14.7.0.255 1.0.1.8.0.101 1.0.1.8.1.101 " \
-#                "1.0.1.8.2.101 1.0.1.8.3.101 1.0.1.8.4.101 1.0.2.8.0.101 1.0.2.8.1.101 " \
-#                "1.0.2.8.2.101 1.0.2.8.3.101 1.0.2.8.4.101 1.0.3.8.0.101 1.0.3.8.1.101 " \
-#                "1.0.3.8.2.101 1.0.3.8.3.101 1.0.3.8.4.101 1.0.4.8.0.101 1.0.4.8.1.101 " \
-#                "1.0.4.8.2.101 1.0.4.8.3.101 1.0.4.8.4.101 0.0.22.0.0.255 0.1.22.0.0.255 " \
-#                "0.2.22.0.0.255 0.0.96.3.10.255 0.0.96.1.2.255 0.0.96.1.8.255 0.0.96.4.3.255 " \
-#                "0.0.96.1.0.255 0.0.0.9.1.255 0.0.0.9.2.255"
-#     else:
-#         return "1.0.1.8.0.255 1.0.1.8.1.255 1.0.1.8.2.255 1.0.1.8.3.255 1.0.1.8.4.255 " \
-#                "1.0.2.8.0.255 1.0.2.8.1.255 1.0.2.8.2.255 1.0.2.8.3.255 1.0.2.8.4.255 " \
-#                "1.0.3.8.0.255 1.0.3.8.1.255 1.0.3.8.2.255 1.0.3.8.3.255 1.0.3.8.4.255 " \
-#                "1.0.4.8.0.255 1.0.4.8.1.255 1.0.4.8.2.255 1.0.4.8.3.255 1.0.4.8.4.255 " \
-#                "1.0.32.7.0.255 1.0.52.7.0.255 1.0.72.7.0.255 1.0.124.7.0.255 1.0.125.7.0.255 " \
-#                "1.0.126.7.0.255 1.0.91.7.0.255 1.0.31.7.0.255 1.0.51.7.0.255 1.0.71.7.0.255 " \
-#                "1.0.1.7.0.255 1.0.21.7.0.255 1.0.41.7.0.255 1.0.61.7.0.255 1.0.3.7.0.255 " \
-#                "1.0.23.7.0.255 1.0.43.7.0.255 1.0.63.7.0.255 1.0.9.7.0.255 1.0.29.7.0.255 " \
-#                "1.0.49.7.0.255 1.0.69.7.0.255 1.0.13.7.0.255 1.0.33.7.0.255 1.0.53.7.0.255 " \
-#                "1.0.73.7.0.255 1.0.14.7.0.255 1.0.1.8.0.101 1.0.1.8.1.101 " \
-#                "1.0.1.8.2.101 1.0.1.8.3.101 1.0.1.8.4.101 1.0.2.8.0.101 1.0.2.8.1.101 " \
-#                "1.0.2.8.2.101 1.0.2.8.3.101 1.0.2.8.4.101 1.0.3.8.0.101 1.0.3.8.1.101 " \
-#                "1.0.3.8.2.101 1.0.3.8.3.101 1.0.3.8.4.101 1.0.4.8.0.101 1.0.4.8.1.101 " \
-#                "1.0.4.8.2.101 1.0.4.8.3.101 1.0.4.8.4.101 0.0.22.0.0.255 0.1.22.0.0.255 " \
-#                "0.2.22.0.0.255 0.0.96.1.2.255 0.0.96.1.8.255 " \
-#                "0.0.96.1.0.255 0.0.0.9.1.255 0.0.0.9.2.255"
-
-
 def load_display_readout(all_values):
     capture_objects = []
     for obis in all_values:
@@ -208,24 +154,79 @@ def parse_auto_connect_object_for_write(obj, reader, value, attribute):
     elif attribute == '4':
         obj.repetitionDelay = int(value)
     elif attribute == '5':
-        value = re.sub(r'[^0-9,.:* ]', '', value)
-        value = value.split(',')
-        value[0] = value[0].strip()
-        print(value[0])
-        value[1] = value[1].strip()
-        print(value[1])
+        # value = re.sub(r'[^0-9,.:* ]', '', value)
+        # value = value.split(',')
+        # value[0] = value[0].strip()
+        #
+        # value[1] = value[1].strip()
+        #
+        # start = GXDateTime(value[0], "%d.%m.%Y %H:%M:%S")
+        #
+        # end = GXDateTime(value[1], "%d.%m.%Y %H:%M:%S")
+        #
+        # obj.callingWindow.append((start, end))  #  'NoneType' object has no attribute 'seconds' ???   *.*.* 13:11:31, *.*.* 14:17:31
+        raise Exception('Атрибут пока не обрабатывается для записи!!!')
 
-        start = GXDateTime(value[0], '%m.%d.%Y %H:%M:%S')
-        print(start.value)
-        end = GXDateTime(value[1], '%m.%d.%Y %H:%M:%S')
-        print(end.value)
-        obj.callingWindow.append((start, end))  #  'NoneType' object has no attribute 'seconds' ???
-
-        print(obj.callingWindow)
     elif attribute == '6':
-        value = re.sub(r'[^0-9,.:]', '', value)
+        value = re.sub(r'[^0-9,.:*]', '', value)
         value = value.split(',')
         obj.destinations = value
+    else:
+        raise Exception('Атрибут не поддерживает запись!!!')
+    return obj
+
+
+def parse_communication_port_protection_object_for_write(obj, reader, value, attribute):
+    if attribute == '2':
+        if value in ['1', '2']:
+            obj.protectionMode = int(value)
+        else:
+            raise Exception('Для protectionMode доступны только значения 1 или 2..')
+    elif attribute == '3':
+        obj.allowedFailedAttempts = int(value)
+    elif attribute == '4':
+        obj.initialLockoutTime = int(value)
+    elif attribute == '5':
+        obj.steepnessFactor = int(value)
+    elif attribute == '6':
+        obj.maxLockoutTime = int(value)
+    else:
+        raise Exception('Атрибут не поддерживает запись!!!')
+    return obj
+
+
+def parse_iec_hdlc_setup_object_for_write(obj, reader, value, attribute):
+    if attribute == '2':
+        if value in ['5', '6', '7', '8', '9']:
+            obj.communicationSpeed = int(value)
+        else:
+            raise Exception('Для protectionMode доступны только значения 5, 6, 7, 8, 9..')
+    elif attribute == '5':
+        obj.maximumInfoLengthTransmit = int(value)
+    elif attribute == '6':
+        obj.maximumInfoLengthReceive = int(value)
+    elif attribute == '8':
+        obj.inactivityTimeout = int(value)
+    else:
+        raise Exception('Атрибут не поддерживает запись!!!')
+    return obj
+
+
+def parse_action_schedule_object_for_write(obj, reader, value, attribute):
+    if attribute == '3':
+        obj.type_ = int(value)
+        if value in ['1', '2', '3', '4', '5']:
+            obj.type_ = int(value)
+        else:
+            raise Exception('Для Type доступны только значения 1, 2, 3, 4, 5..')
+    elif attribute == '4':
+        value = re.sub(r'[^0-9,.:* ]', '', value)
+        value = value.split(',')
+        for i, time in enumerate(value):
+            time = time.strip()
+            time_to_write = GXDateTime(time, "%d.%m.%Y %H:%M:%S")
+            # time_to_write.skip = execution_time[i].skip   *.*.* 21:00:00,  *.*.* 22:00:00
+            obj.executionTime.append(time_to_write)
     else:
         raise Exception('Атрибут не поддерживает запись!!!')
     return obj

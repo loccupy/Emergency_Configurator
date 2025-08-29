@@ -459,8 +459,8 @@ class FileUploader(QWidget):
                     # return
                     continue
 
-                print(f'Для атрибута {i[2]} объекта {i[0].logicalName} установлено значение >> ',
-                      reader.read(i[0], int(i[2])))
+                print(f'Для атрибута {i[2]} объекта {i[0].logicalName} установлено значение >>\n',
+                      read_obj(i[0], reader, i[2]))
 
             reader.close()
             print("Соединение разорвано\n")
