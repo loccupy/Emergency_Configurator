@@ -3,13 +3,15 @@ from zoneinfo import ZoneInfo
 
 from gurux_dlms import GXUInt16, GXUInt8, GXDateTime
 from gurux_dlms.enums import ObjectType, DataType, Unit
-from gurux_dlms.objects import GXDLMSActionItem, GXDLMSPushSetup, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister, \
+from gurux_dlms.objects import GXDLMSActionItem, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister, \
     GXDLMSActionSchedule, GXDLMSSpecialDay, GXDLMSScript, GXDLMSScriptAction, GXDLMSSeasonProfile, GXDLMSWeekProfile, \
     GXDLMSDayProfile, GXDLMSDayProfileAction, GXDLMSGSMDiagnostic, GXDLMSGSMCellInfo, GXAdjacentCell, \
     GXDLMSObjectDefinition
 from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode, \
-    SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus, SortMethod
+    SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus, SortMethod, ServiceType, \
+    MessageType
 
+from libs.GXDLMSPushSetup import GXDLMSPushSetup
 from libs.ProtectionMode import ProtectionMode
 from libs.ProtectionStatus import ProtectionStatus
 # from libs.parsing import parse_buffer_for_read_from_profile_generic
@@ -261,16 +263,29 @@ def get_value_from_push_setup(obj, reader, attribute):
         value = f'pushObjectList = {[i[0].logicalName for i in reader.read(obj, int(attribute))]}'
     elif attribute == '3':
         temp = reader.read(obj, int(attribute))
-        value = f'(service, destination, message) = service: {temp[0]}, destination: {temp[1]}, message: {temp[2]}'
+        member_service = ServiceType(temp[0])
+        member_message = MessageType(temp[2])
+        value = (f'(service, destination, message) = service >> {member_service.name}, destination >> {temp[1]},'
+                 f' message >> {member_message.name}')
     elif attribute == '4':
         temp = reader.read(obj, int(attribute))
-        value = f'communicationWindow = {temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S"), temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")}'
+        if str(temp[0][0].value)[:10] == '2000-01-01':
+            start = '*.*.*' + str(temp[0][0].value.replace(tzinfo=None))[10:]
+        else:
+            start = temp[0][0].value.strftime("%d.%m.%Y %H:%M:%S")
+        if str(temp[0][1].value)[:10] == '2000-01-01':
+            end = '*.*.*' + str(temp[0][1].value.replace(tzinfo=None))[10:]
+        else:
+            end = temp[0][1].value.strftime("%d.%m.%Y %H:%M:%S")
+
+        value = f'communicationWindow = start >> {start}, end >> {end}'
     elif attribute == '5':
         value = f'randomisationStartInterval = {reader.read(obj, int(attribute))}'
     elif attribute == '6':
         value = f'numberOfRetries = {reader.read(obj, int(attribute))}'
     elif attribute == '7':  #  здесь может ругаться на GXUInt16
-        value = f'repetitionDelay = {reader.read(obj, int(attribute))}'
+        temp_obj = GXDLMSPushSetup(obj.logicalName)  # Использую переделанный класс
+        value = f'repetitionDelay = {reader.read(temp_obj, int(attribute))}'
     elif attribute == '8':
         value = f'pushInterface = {reader.read(obj, int(attribute))}'
     elif attribute == '9':
@@ -306,12 +321,24 @@ def get_value_from_auto_connect(obj, reader, attribute):
         temp = reader.read(obj, int(attribute))
         if len(temp) != 0:
             for i, obj in enumerate(temp):
+                if str(obj[0].value)[:10] == '2000-01-01':
+                    start = '*.*.*' + str(obj[0].value.replace(tzinfo=None))[10:]
+                else:
+                    start = obj[0].value.strftime("%d.%m.%Y %H:%M:%S")
+                if str(obj[1].value)[:10] == '2000-01-01':
+                    end = '*.*.*' + str(obj[1].value.replace(tzinfo=None))[10:]
+                else:
+                    end = obj[1].value.strftime("%d.%m.%Y %H:%M:%S")
+
                 value += str(f'Calling Window №{i} = ' + ''.join(
-                    f'start: {obj[0].value.strftime("%d.%m.%Y %H:%M:%S")}, end: {obj[1].value.strftime("%d.%m.%Y %H:%M:%S")} \n'))
+                    f'start >> {start}, end >> {end} \n'))
         else:
             value = "НЕТ ЗАПИСЕЙ"
     elif attribute == '6':
-        value = f'Destinations = {reader.read(obj, int(attribute))}'
+        temp = reader.read(obj, int(attribute))
+
+        for i, obj in enumerate(temp):
+            value += str(f'Destinations №{i} = ' + ''.join(f'{obj} \n'))
     else:
         raise Exception('Атрибут не удалось считать')
     return value

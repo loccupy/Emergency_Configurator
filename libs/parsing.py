@@ -1,10 +1,14 @@
 import re
+import zoneinfo
 from datetime import datetime
+from time import sleep
 
 from gurux_dlms import GXUInt8, GXUInt16, GXStructure, GXUInt32, GXDateTime
 from gurux_dlms.enums import DataType
 from gurux_dlms.objects import GXDLMSHdlcSetup, GXDLMSCaptureObject, GXDLMSData, GXDLMSDisconnectControl, \
     GXDLMSRegister, GXDLMSAutoConnect
+
+from libs.GXDLMSPushSetup import GXDLMSPushSetup
 
 
 def parse_data_object_for_write(obj, reader, value, attribute):
@@ -154,18 +158,17 @@ def parse_auto_connect_object_for_write(obj, reader, value, attribute):
     elif attribute == '4':
         obj.repetitionDelay = int(value)
     elif attribute == '5':
-        # value = re.sub(r'[^0-9,.:* ]', '', value)
-        # value = value.split(',')
-        # value[0] = value[0].strip()
-        #
-        # value[1] = value[1].strip()
-        #
-        # start = GXDateTime(value[0], "%d.%m.%Y %H:%M:%S")
-        #
-        # end = GXDateTime(value[1], "%d.%m.%Y %H:%M:%S")
-        #
-        # obj.callingWindow.append((start, end))  #  'NoneType' object has no attribute 'seconds' ???   *.*.* 13:11:31, *.*.* 14:17:31
-        raise Exception('Атрибут пока не обрабатывается для записи!!!')
+        value = re.sub(r'[^0-9,.:* ]', '', value)
+        value = value.split(',')
+        value[0] = value[0].strip()
+        value[1] = value[1].strip()
+
+        start = GXDateTime(value[0], "%d.%m.%Y %H:%M:%S")
+        start.value = start.value.replace(tzinfo=zoneinfo.ZoneInfo("Europe/Moscow"))
+        end = GXDateTime(value[1], "%d.%m.%Y %H:%M:%S")
+        end.value = end.value.replace(tzinfo=zoneinfo.ZoneInfo("Europe/Moscow"))
+
+        obj.callingWindow.append((start, end))  #  'NoneType' object has no attribute 'seconds' ???   *.*.* 13:11:31, *.*.* 14:17:31
 
     elif attribute == '6':
         value = re.sub(r'[^0-9,.:*]', '', value)
@@ -227,6 +230,116 @@ def parse_action_schedule_object_for_write(obj, reader, value, attribute):
             time_to_write = GXDateTime(time, "%d.%m.%Y %H:%M:%S")
             # time_to_write.skip = execution_time[i].skip   *.*.* 21:00:00,  *.*.* 22:00:00
             obj.executionTime.append(time_to_write)
+    else:
+        raise Exception('Атрибут не поддерживает запись!!!')
+    return obj
+
+
+def all_push_objects():
+    return ["0.0.42.0.0.255", "0.0.96.1.0.255", "0.0.96.1.1.255", "1.0.1.8.0.255", "1.0.2.8.0.255",
+            "1.0.3.8.0.255", "1.0.4.8.0.255", "0.0.97.98.0.255", "0.0.97.98.10.255", "0.0.96.50.26.255",
+            "0.0.96.50.27.255", "0.0.96.50.31.255", "0.0.96.5.135.255"]
+
+
+def validate_ip_port(address):
+    if address == "*":
+        return True
+    ip_port_pattern = r'^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})$'
+    match = re.match(ip_port_pattern, address.strip())
+    if not match:
+        return False, "Неверный формат"
+
+    ip_part = match.group(1)  # IP-адрес
+    port_part = int(match.group(2))  # Порт
+
+    # Проверка диапазона IP
+    ip_parts = list(map(int, ip_part.split('.')))
+    if any(octet < 0 or octet > 255 for octet in ip_parts):
+        return False, "IP-адрес содержит недопустимые значения (должно быть от 0 до 255)"
+
+    # Проверка диапазона порта
+    if port_part < 1 or port_part > 65535:
+        return False, "Порт должен быть в диапазоне от 1 до 65535"
+
+    return True, "Адрес корректен"
+
+
+def parse_push_setup_object_for_write(obj, reader, value, attribute):
+    if attribute == '2':
+        value = re.sub(r'[^0-9,.]', '', value)
+        value = value.split(',')
+        old_push_objects = reader.read(obj, 2)
+        sleep(1)
+        new_push_objects = old_push_objects[:2]
+        for i, temp in enumerate(
+                value):  # Здесь успех записи может зависеть от перечня объектов, которые пользователь хочет добавить. см. доку
+            if temp not in all_push_objects():
+                raise Exception(f"Объект {temp} не входит в список допустимых по документации!!!")
+            if temp in ['1.0.1.8.0.255', '1.0.2.8.0.255', '1.0.3.8.0.255', '1.0.4.8.0.255']:
+                # In Register we firstly write value
+                capture_obj = GXDLMSCaptureObject(2, 0)
+                new_push_objects.append((GXDLMSRegister(temp), capture_obj))
+                # Then scaler and unit of that register
+                capture_obj = GXDLMSCaptureObject(3, 0)
+                new_push_objects.append((GXDLMSRegister(temp), capture_obj))
+            else:
+                # Data we simply write its value
+                capture_obj = GXDLMSCaptureObject(2, 0)
+                new_push_objects.append((GXDLMSData(temp), capture_obj))
+            obj.pushObjectList = new_push_objects
+    elif attribute == '3':
+        value = re.sub(r'[^0-9,.:]', '', value)
+        value = value.split(',')
+
+        service = value[0]
+        if service not in ['0', '1', '2', '3', '4', '5', '6', '7']:
+            raise Exception("Доступный диапазон значений для service >> [0, 1, 2, 3, 4, 5, 6, 7]")
+        else:
+            obj.service = int(service)
+
+        destination = value[1]
+        if not validate_ip_port(destination):
+            raise Exception("Значение destination не проходит валидацию!!!")
+        else:
+            obj.destination = destination
+
+        message = value[2]
+        if message not in ['0', '1', '128']:
+            raise Exception("Доступный диапазон значений для message >> [0, 1, 128]")
+        else:
+            obj.message = int(message)
+
+    elif attribute == '4':
+        value = re.sub(r'[^0-9,.:* ]', '', value)
+        value = value.split(',')
+        value[0] = value[0].strip()
+        value[1] = value[1].strip()
+
+        start = GXDateTime(value[0], '%m.%d.%Y %H:%M:%S')
+        start.value = start.value.replace(tzinfo=zoneinfo.ZoneInfo("Europe/Moscow"))
+        end = GXDateTime(value[1], '%m.%d.%Y %H:%M:%S')
+        end.value = end.value.replace(tzinfo=zoneinfo.ZoneInfo("Europe/Moscow"))
+        obj.communicationWindow.append((start, end))
+    elif attribute == '5':
+        obj.randomisationStartInterval = int(value)
+    elif attribute == '6':
+        obj.numberOfRetries = int(value)
+    elif attribute == '7':
+        temp_obj = GXDLMSPushSetup(obj.logicalName)
+        temp_obj.repetitionDelay = int(value)
+        obj = temp_obj
+    else:
+        raise Exception('Атрибут не поддерживает запись!!!')
+    return obj
+
+
+def parse_limiter_object_for_write(obj, reader, value, attribute):
+    if attribute == '3':
+        obj.thresholdActive = int(value)
+    elif attribute == '6':
+        obj.minOverThresholdDuration = int(value)
+    elif attribute == '7':
+        obj.minUnderThresholdDuration = int(value)
     else:
         raise Exception('Атрибут не поддерживает запись!!!')
     return obj

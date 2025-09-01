@@ -392,3 +392,6 @@ class GXDLMSPushSetup(GXDLMSObject, IGXDLMSBase):
         writer.writeElementString("ClientAddress", self.clientAddress)
         writer.writeElementString("MethodOfConfirmation", self.methodOfConfirmation)
         writer.writeElementString("LastConfirmation", self.lastConfirmation)
+
+    def getNames(self):
+        pass

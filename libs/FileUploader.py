@@ -446,22 +446,27 @@ class FileUploader(QWidget):
         #         temp_object = parse_data_type(key, val[0])
         #         break
 
+        if not self.attributes_for_recording:
+            print("НЕТ ДАННЫХ ДЛЯ ЗАПИСИ!!!")
+            return
         com = self.number_com.text()
         reader, settings = connect(com)
         try:
             settings.media.open()
             reader.initializeConnection()
             print("Соединение установлено")
-            for i in self.attributes_for_recording:
-                if not set_value(i[0], reader, i[1], i[2]):
-                    # reader.close()
-                    # print("Соединение разорвано\n")
-                    # return
-                    continue
+            if self.attributes_for_recording:
+                for i in self.attributes_for_recording:
+                    if not set_value(i[0], reader, i[1], i[2]):
+                        # reader.close()
+                        # print("Соединение разорвано\n")
+                        # return
+                        continue
 
-                print(f'Для атрибута {i[2]} объекта {i[0].logicalName} установлено значение >>\n',
-                      read_obj(i[0], reader, i[2]))
-
+                    print(f'Для атрибута {i[2]} объекта {i[0].logicalName} установлено значение >>\n',
+                          read_obj(i[0], reader, i[2]))
+            else:
+                print("НЕТ ДАННЫХ ДЛЯ ЗАПИСИ!!!")
             reader.close()
             print("Соединение разорвано\n")
         except Exception as e:
