@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>631</width>
-    <height>641</height>
+    <height>702</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -79,9 +79,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>410</y>
+     <y>450</y>
      <width>611</width>
-     <height>221</height>
+     <height>241</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -106,7 +106,7 @@
      <x>10</x>
      <y>80</y>
      <width>611</width>
-     <height>101</height>
+     <height>141</height>
     </rect>
    </property>
    <property name="title">
@@ -115,9 +115,9 @@
    <widget class="QComboBox" name="obis">
     <property name="geometry">
      <rect>
-      <x>140</x>
+      <x>150</x>
       <y>20</y>
-      <width>381</width>
+      <width>451</width>
       <height>31</height>
      </rect>
     </property>
@@ -131,14 +131,20 @@
    <widget class="QComboBox" name="attr">
     <property name="geometry">
      <rect>
-      <x>530</x>
-      <y>20</y>
-      <width>71</width>
+      <x>80</x>
+      <y>60</y>
+      <width>181</width>
       <height>31</height>
      </rect>
     </property>
     <property name="editable">
      <bool>false</bool>
+    </property>
+    <property name="currentText">
+     <string/>
+    </property>
+    <property name="currentIndex">
+     <number>-1</number>
     </property>
     <property name="maxVisibleItems">
      <number>15</number>
@@ -148,8 +154,8 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
-      <width>311</width>
+      <y>100</y>
+      <width>181</width>
       <height>31</height>
      </rect>
     </property>
@@ -160,9 +166,9 @@
    <widget class="QPushButton" name="add_attribute">
     <property name="geometry">
      <rect>
-      <x>330</x>
-      <y>60</y>
-      <width>271</width>
+      <x>200</x>
+      <y>100</y>
+      <width>191</width>
       <height>31</height>
      </rect>
     </property>
@@ -175,7 +181,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>121</width>
+      <width>131</width>
       <height>31</height>
      </rect>
     </property>
@@ -198,12 +204,73 @@
      <string>Поиск</string>
     </property>
    </widget>
+   <widget class="QComboBox" name="method">
+    <property name="geometry">
+     <rect>
+      <x>390</x>
+      <y>60</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="editable">
+     <bool>false</bool>
+    </property>
+    <property name="currentText">
+     <string/>
+    </property>
+    <property name="currentIndex">
+     <number>-1</number>
+    </property>
+    <property name="maxVisibleItems">
+     <number>15</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>70</y>
+      <width>51</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Атрибуты</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>70</y>
+      <width>41</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Методы</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="execute">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>100</y>
+      <width>201</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Выполнить метод</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QPushButton" name="write">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>370</y>
+     <y>410</y>
      <width>611</width>
      <height>31</height>
     </rect>
@@ -219,7 +286,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>190</y>
+     <y>230</y>
      <width>611</width>
      <height>171</height>
     </rect>

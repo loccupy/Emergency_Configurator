@@ -1,4 +1,5 @@
 from gurux_dlms.enums import ErrorCode, ObjectType, DataType
+from gurux_dlms.internal import _GXLocalizer
 from gurux_dlms.internal._GXCommon import _GXCommon
 from gurux_dlms.objects.GXDLMSObject import GXDLMSObject
 from gurux_dlms.objects.IGXDLMSBase import IGXDLMSBase
@@ -20,10 +21,26 @@ class GXDLMSCommunicationPortProtection(GXDLMSObject, IGXDLMSBase):
         self.failedAttempts = 0
         self.cumulativeFailedAttempts = 0
 
+    # def getNames(self):
+    #     if self.shortName != 0:
+    #         return self.shortName
+    #     return self.logicalName
+
     def getNames(self):
-        if self.shortName != 0:
-            return self.shortName
-        return self.logicalName
+        return (_GXLocalizer.gettext("Logical name"),
+                _GXLocalizer.gettext("Protection mode"),
+                _GXLocalizer.gettext("Allowed failed attempts"),
+                _GXLocalizer.gettext("Initial lockout time"),
+                _GXLocalizer.gettext("Steepness factor"),
+                _GXLocalizer.gettext("Max lockout time"),
+                _GXLocalizer.gettext("Max lockout time"),
+                _GXLocalizer.gettext("Port"),
+                _GXLocalizer.gettext("Failed attempts"),
+                _GXLocalizer.gettext("Cumulative failed attempts")
+                )
+
+    def getMethodNames(self):
+        return [_GXLocalizer.gettext("RESET")]
 
     def getValues(self):
         return [self.logicalName,

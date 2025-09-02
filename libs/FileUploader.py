@@ -7,7 +7,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QSortFilterProxyModel, Qt, QString
 from PyQt5.QtGui import QIntValidator, QTextCursor, QStandardItemModel
 from PyQt5.QtWidgets import QWidget, QLineEdit, QPushButton, QTextEdit, QMessageBox, QApplication, QComboBox, \
     QVBoxLayout, QDialogButtonBox, QDialog, QSizePolicy, QCompleter
-from gurux_dlms import GXUInt32, GXUInt16
+from gurux_dlms import GXUInt32, GXUInt16, GXReplyData
 from gurux_dlms.enums import DataType, ObjectType
 from gurux_dlms.objects import GXDLMSData, GXDLMSObject
 
@@ -59,6 +59,14 @@ class InputDialog(QDialog):
 
         self.setLayout(layout)
 
+    def get_value(self):
+        """Показать диалог и вернуть введённое значение"""
+        if self.exec_() == QDialog.Accepted:
+            self.value = self.input_field.toPlainText().strip()
+            return self.value
+        else:
+            return None
+
     def accept(self):
         value = self.input_field.toPlainText()
         self.value_submitted.emit(value)
@@ -68,6 +76,14 @@ class InputDialog(QDialog):
 class FileUploader(QWidget):
     def __init__(self):
         super().__init__()
+        self.method_categories = None
+        self.attribute_categories = None
+        self.add_attr = None
+        self.delete_all = None
+        self.delete_last = None
+        self.attributes_for_recording = None
+        self.method = None
+        self.original_obis_list = None
         self.attribute = None
         self.objects_list = None
         self.completer_model = QStringListModel()
@@ -96,6 +112,7 @@ class FileUploader(QWidget):
         self.text_edit_2.setPlaceholderText("Параметры на изменение")
 
         self.attribute_categories = {}
+        self.method_categories = {}
 
         self.number_com = self.findChild(QLineEdit, 'enter_com')
         self.number_com.setValidator(QIntValidator())
@@ -103,11 +120,13 @@ class FileUploader(QWidget):
         self.obises = self.findChild(QComboBox, 'obis')
         # Подключаем сигнал изменения выбора
         self.obises.currentIndexChanged.connect(self.update_files)
+        self.obises.currentIndexChanged.connect(self.update_files_attr)
         self.get_all_objects_from_excel()
 
         self.search = self.findChild(QLineEdit, 'search')
 
         self.attribute = self.findChild(QComboBox, 'attr')
+        self.method = self.findChild(QComboBox, 'method')
 
         self.read_attr = self.findChild(QPushButton, 'read')
         self.read_attr.clicked.connect(self.read_param)
@@ -116,6 +135,9 @@ class FileUploader(QWidget):
 
         self.write_att = self.findChild(QPushButton, 'write')
         self.write_att.clicked.connect(self.write_param)
+
+        self.execute_meth = self.findChild(QPushButton, 'execute')
+        self.execute_meth.clicked.connect(self.execute_method)
 
         self.text_edit = self.findChild(QTextEdit, 'textEdit')
         self.text_edit.setLineWrapMode(QTextEdit.WidgetWidth)
@@ -320,13 +342,22 @@ class FileUploader(QWidget):
             self.objects_list = temp_description
 
             self.attribute_categories = {}
+            self.method_categories = {}
             arr_obis = []
             for key, value in self.objects_list.items():
                 obis = key
                 object_type = value[0]
                 description = value[1]
                 obj = parse_data_type(obis, object_type)
-                self.attribute_categories[obis] = [str(y) for y in range(1, obj.getAttributeCount() + 1)]
+                # print(obis)
+                if object_type == ObjectType.ASSOCIATION_LOGICAL_NAME:
+                    obj.version = -1 # Модернизирую Association чтобы избежать list_out_of_range (obj.getNames только 8 когда атрибутов 11)getMethodNames
+                list_attr =  [f'{y} {obj.getNames()[y - 1]}' for y in range(1, obj.getAttributeCount() + 1)]
+                self.attribute_categories[obis] = list_attr
+
+                list_method = [f'{y} {obj.getMethodNames()[y - 1]}' for y in range(1, obj.getMethodCount() + 1)]
+                self.method_categories[obis] = list_method
+
                 arr_obis.append(obis + ' ' + description)
 
             self.original_obis_list = arr_obis
@@ -335,7 +366,7 @@ class FileUploader(QWidget):
 
             self.obises.addItems(arr_obis)
         except Exception as e:
-            print(e)
+            print('Ошибка при получении списка атрибутов и методов с помощью excel файла >>', e)
 
     def update_files(self):
         if self.obises:
@@ -350,7 +381,22 @@ class FileUploader(QWidget):
                 if selected_category in self.attribute_categories:
                     self.attribute.addItems(self.attribute_categories[selected_category])
             except Exception as e:
-                print(e)
+                print('Ошибка в update_files после получения списков из excel файла >>', e)
+
+    def update_files_attr(self):
+        if self.obises:
+            try:
+                # Получаем выбранную категорию
+                selected_category = self.obises.currentText().split()[0]
+
+                # Очищаем комбобокс
+                self.method.clear()
+
+                # Заполняем второй комбобокс соответствующими файлами
+                if selected_category in self.method_categories:
+                    self.method.addItems(self.method_categories[selected_category])
+            except Exception as e:
+                print('Ошибка в update_files после получения списков из excel файла >>', e)
 
     def read_param(self):
         if not self.obises.currentText().strip():
@@ -363,7 +409,8 @@ class FileUploader(QWidget):
             )
             return
         obis = self.obises.currentText().split()[0]
-        attribute = self.attribute.currentText()
+        attribute = self.attribute.currentText().split()[0]
+        atr_description = self.attribute.currentText().split(" ", 1)[1]
         temp_object = None
 
         for key, value in self.objects_list.items():
@@ -390,7 +437,7 @@ class FileUploader(QWidget):
 
             value = read_obj(temp_object, reader, attribute) # если значение невозможно преобразовать в строку, возвращает ошибку - надо доработать
 
-            print(f'Для атрибута {attribute} объекта {temp_object.logicalName} считано значение >> \n{value}')
+            print(f'Для атрибута #{attribute} {atr_description}# объекта {temp_object.logicalName} считано значение >> \n{value}')
 
             reader.close()
             print("Соединение разорвано\n")
@@ -401,20 +448,22 @@ class FileUploader(QWidget):
 
     def add_attributes(self, value):
         attribute = None
+        atr_description = None
         obis = None
         temp_object = None
         try:
-            attribute = self.attribute.currentText()
+            attribute = self.attribute.currentText()[0]
+            atr_description = self.attribute.currentText()[1:]
             obis = self.obises.currentText().split()[0]
             for key, val in self.objects_list.items():
                 if key == obis:
                     temp_object = parse_data_type(key, val[0])
                     break
-            self.attributes_for_recording.append([temp_object, value, attribute])
+            self.attributes_for_recording.append([temp_object, value, attribute, atr_description])
             self.update_attributes_display()
-            print(f'Для атрибута {attribute} объекта {obis} добавлено значение >> ', value)
+            print(f'Для атрибута #{attribute} {atr_description}# объекта {obis} добавлено значение >> ', value)
         except Exception as e:
-            print(f"Ошибка при добавлении атрибута {attribute} объекта {obis} на запись в очередь", e)
+            print(f"Ошибка при добавлении атрибута #{attribute} {atr_description}# объекта {obis} на запись в очередь", e)
             raise
 
     def write_param(self):
@@ -427,24 +476,6 @@ class FileUploader(QWidget):
                 QMessageBox.Ok
             )
             return
-        # if not self.value.text().strip():
-        #     # Показываем предупреждение
-        #     QMessageBox.warning(
-        #         self,
-        #         "Предупреждение",
-        #         "Введите данные в поле Value!",
-        #         QMessageBox.Ok
-        #     )
-        #     return
-
-        # obis = self.obises.currentText().split()[0]
-        # attribute = self.attribute.currentText()
-        # temp_object = None
-        #
-        # for key, val in self.objects_list.items():
-        #     if key == obis:
-        #         temp_object = parse_data_type(key, val[0])
-        #         break
 
         if not self.attributes_for_recording:
             print("НЕТ ДАННЫХ ДЛЯ ЗАПИСИ!!!")
@@ -458,12 +489,9 @@ class FileUploader(QWidget):
             if self.attributes_for_recording:
                 for i in self.attributes_for_recording:
                     if not set_value(i[0], reader, i[1], i[2]):
-                        # reader.close()
-                        # print("Соединение разорвано\n")
-                        # return
                         continue
 
-                    print(f'Для атрибута {i[2]} объекта {i[0].logicalName} установлено значение >>\n',
+                    print(f'Для атрибута #{i[2]} {i[3]}# объекта {i[0].logicalName} установлено значение >>\n',
                           read_obj(i[0], reader, i[2]))
             else:
                 print("НЕТ ДАННЫХ ДЛЯ ЗАПИСИ!!!")
@@ -472,4 +500,98 @@ class FileUploader(QWidget):
         except Exception as e:
             settings.media.close()
             self.update_text(f"Ошибка при записи >> {e}.", "red")
+            print("Соединение разорвано\n")
+
+
+    def execute_method(self):
+        if not self.obises.currentText().strip():
+            # Показываем предупреждение
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Отсутствует значение в поле OBIS!",
+                QMessageBox.Ok
+            )
+            return
+        obis = self.obises.currentText().split()[0]
+        if not self.method.currentText().strip():
+            # Показываем предупреждение
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Отсутствует методы для выполнения!",
+                QMessageBox.Ok
+            )
+            return
+        method_number = self.method.currentText().split()[0]
+        method_description = self.method.currentText().split(" ", 1)[1]
+        temp_object = None
+
+        for key, value in self.objects_list.items():
+            if key == obis:
+                temp_object = parse_data_type(key, value[0])
+                break
+
+        if not self.number_com.text().strip():
+            # Показываем предупреждение
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Введите COM соединения!",
+                QMessageBox.Ok
+            )
+            return
+
+        com = self.number_com.text()
+        reader, settings = connect(com)
+        try:
+            settings.media.open()
+            reader.initializeConnection()
+            print("Соединение установлено")
+
+            if temp_object.getObjectType() == ObjectType.CLOCK:
+                if method_number == '6':
+                    dialog = InputDialog(self)
+                    value = dialog.get_value()
+                    reply = GXReplyData()
+                    reader.readDataBlock(temp_object.shiftTime(reader.client, int(value)), reply)
+                elif method_number == '3':
+                    reply = GXReplyData()
+                    reader.readDataBlock(temp_object.adjustToMinute(reader.client), reply)
+                else:
+                    raise Exception ('Метод с уровнем NO ACCESS')
+            elif temp_object.getObjectType() == ObjectType.PROFILE_GENERIC:
+                if method_number == '1':
+                    reply = GXReplyData()
+                    reader.readDataBlock(temp_object.reset(reader.client), reply)
+                elif method_number == '2':
+                    reply = GXReplyData()
+                    reader.readDataBlock(temp_object.capture(reader.client), reply)
+            elif temp_object.getObjectType() == ObjectType.ACTIVITY_CALENDAR:
+                reply = GXReplyData()
+                reader.readDataBlock(temp_object.activatePassiveCalendar(reader.client), reply)
+            elif temp_object.getObjectType() == ObjectType.DISCONNECT_CONTROL:
+                if method_number == '1':
+                    reply = GXReplyData()
+                    reader.readDataBlock(temp_object.remoteDisconnect(reader.client), reply)
+                elif method_number == '2':
+                    reply = GXReplyData()
+                    reader.readDataBlock(temp_object.remoteReconnect(reader.client), reply)
+            elif temp_object.getObjectType() == ObjectType.COMMUNICATION_PORT_PROTECTION:
+                reply = GXReplyData()
+                try:
+                    reader.readDataBlock(temp_object.reset(reader.client), reply) # включил в блок, потому что возвращает ошибку - мб связано с совместимостью библиотек
+                except:
+                    pass
+            else:
+                raise Exception ("Данный класс пока не обрабатывается!!!")
+
+            print(
+                f'Метод #{method_number} {method_description}# объекта {temp_object.logicalName} выполнен')
+
+            reader.close()
+            print("Соединение разорвано\n")
+        except Exception as e:
+            settings.media.close()
+            self.update_text(f"Ошибка при выполнении метода >> {e}.", "red")
             print("Соединение разорвано\n")
