@@ -518,7 +518,7 @@ class FileUploader(QWidget):
                 except:
                     pass
             else:
-                raise Exception ("Данный класс пока не обрабатывается!!!")
+                raise Exception("Выполнение методов в данном объекте пока не обрабатываются!!!")
 
             print(
                 f'Метод #{method_number} {method_description}# объекта {temp_object.logicalName} выполнен')
