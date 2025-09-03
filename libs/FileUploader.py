@@ -84,7 +84,7 @@ class FileUploader(QWidget):
         self.attributes_for_recording = None
         self.method = None
         self.original_obis_list = None
-        self.attribute = None
+        self.attribute = QComboBox()
         self.objects_list = None
         self.completer_model = QStringListModel()
         self.proxy_model = QSortFilterProxyModel()
@@ -264,71 +264,6 @@ class FileUploader(QWidget):
         # Применяем стиль к приложению
         self.setStyleSheet(dark_stylesheet)
 
-    # def start_thread(self):
-    #     try:
-    #         if not self.number_com.text().strip():
-    #             # Показываем предупреждение
-    #             QMessageBox.warning(
-    #                 self,
-    #                 "Предупреждение",
-    #                 "Введите COM соединения!",
-    #                 QMessageBox.Ok
-    #             )
-    #             return
-    #
-    #         self.thread.com = self.number_com.text()
-    #         self.read_collection.setEnabled(False)
-    #         self.write_att.setEnabled(False)
-    #         self.read_attr.setEnabled(False)
-    #         self.thread.start()
-    #
-    #     except Exception as e:
-    #         print(e)
-
-    # def on_finished(self):
-    #     self.read_collection.setEnabled(True)
-    #     self.write_att.setEnabled(True)
-    #     self.read_attr.setEnabled(True)
-    #     print("Задача завершена")
-
-    # def update_progress(self, value):
-    #     print(f"Прогресс: {value}%")
-
-    # def handle_result(self, result):
-    #     try:
-    #         current_dir = sys.path[0]
-    #         file_path = os.path.join(current_dir, 'libs', "All_OBIS.xlsx")
-    #         df = pd.read_excel(file_path)
-    #         # obis_values = df['OBIS']
-    #         # meter_types = df['Описание']
-    #
-    #         temp_description = {}
-    #         for index, row in df.iterrows():
-    #             temp_description[row['OBIS']] = row['Описание']
-    #
-    #         # print(len(temp_description))
-    #
-    #         # for key in temp_description:
-    #         #     for i in range(len(result)):
-    #         #         if key == result[i].logicalName:
-    #         #             break
-    #         #     else:
-    #         #         print(key)
-    #         # Здесь обрабатываем полученный результат
-    #
-    #         self.obises.clear()
-    #         self.objects_list = result
-    #         # print(len([i for i in self.objects_list]))
-    #         self.attribute_categories = {}
-    #         arr_obis = []
-    #         for i in self.objects_list:
-    #             self.attribute_categories[i.logicalName] = [str(y) for y in range(1, i.getAttributeCount() + 1)]
-    #             # arr_type.add(type(i))
-    #             arr_obis.append(i.logicalName + ' ' + temp_description[i.logicalName])
-    #         self.obises.addItems(arr_obis)
-    #     except Exception as e:
-    #         print(e)
-
     def get_all_objects_from_excel(self):
         try:
             current_dir = os.path.dirname(__file__)
@@ -349,10 +284,9 @@ class FileUploader(QWidget):
                 object_type = value[0]
                 description = value[1]
                 obj = parse_data_type(obis, object_type)
-                # print(obis)
                 if object_type == ObjectType.ASSOCIATION_LOGICAL_NAME:
                     obj.version = -1 # Модернизирую Association чтобы избежать list_out_of_range (obj.getNames только 8 когда атрибутов 11)getMethodNames
-                list_attr =  [f'{y} {obj.getNames()[y - 1]}' for y in range(1, obj.getAttributeCount() + 1)]
+                list_attr = [f'{y} {obj.getNames()[y - 1]}' for y in range(1, obj.getAttributeCount() + 1)]
                 self.attribute_categories[obis] = list_attr
 
                 list_method = [f'{y} {obj.getMethodNames()[y - 1]}' for y in range(1, obj.getMethodCount() + 1)]
