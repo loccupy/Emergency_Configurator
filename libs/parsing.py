@@ -16,6 +16,9 @@ def parse_data_object_for_write(obj, reader, value, attribute):
         value = re.sub(r'[^0-9,]', '', value).split(',')
         obj.value = [GXUInt8(int(value[0])), GXUInt8(int(value[1]))]
         return obj
+    elif reader.readType(obj, int(attribute)) == DataType.STRING_UTF8:
+        obj.value = value
+        return obj
     elif obj.logicalName == '0.0.2.164.6.255':
         # Очищаем значение и разбиваем по запятой
         cleaned_value = re.sub(r'[^0-9,]', '', value).split(',')

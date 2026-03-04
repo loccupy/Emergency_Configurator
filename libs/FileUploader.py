@@ -280,6 +280,7 @@ class FileUploader(QWidget):
             self.method_categories = {}
             arr_obis = []
             for key, value in self.objects_list.items():
+                print(key)
                 obis = key
                 object_type = value[0]
                 description = value[1]
@@ -300,7 +301,7 @@ class FileUploader(QWidget):
 
             self.obises.addItems(arr_obis)
         except Exception as e:
-            print('Ошибка при получении списка атрибутов и методов с помощью excel файла >>', e)
+            print('Ошибка при получении списка атрибутов и методов с помощью excel файла >>', e, key)
 
     def update_files(self):
         if self.obises:
