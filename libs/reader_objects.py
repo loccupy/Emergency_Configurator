@@ -1,12 +1,8 @@
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
-from gurux_dlms import GXUInt16, GXUInt8, GXDateTime
-from gurux_dlms.enums import ObjectType, DataType, Unit
-from gurux_dlms.objects import GXDLMSActionItem, GXDLMSClock, GXDLMSGprsSetup, GXDLMSRegister, \
-    GXDLMSActionSchedule, GXDLMSSpecialDay, GXDLMSScript, GXDLMSScriptAction, GXDLMSSeasonProfile, GXDLMSWeekProfile, \
-    GXDLMSDayProfile, GXDLMSDayProfileAction, GXDLMSGSMDiagnostic, GXDLMSGSMCellInfo, GXAdjacentCell, \
-    GXDLMSObjectDefinition
+from gurux_dlms import GXDate
+from gurux_dlms.enums import ObjectType, Unit
+
 from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockBase, AutoConnectMode, \
     SingleActionScheduleType, GsmStatus, GsmCircuitSwitchStatus, GsmPacketSwitchStatus, SortMethod, ServiceType, \
     MessageType
@@ -14,7 +10,6 @@ from gurux_dlms.objects.enums import ControlState, ControlMode, BaudRate, ClockB
 from libs.GXDLMSPushSetup import GXDLMSPushSetup
 from libs.ProtectionMode import ProtectionMode
 from libs.ProtectionStatus import ProtectionStatus
-# from libs.parsing import parse_buffer_for_read_from_profile_generic
 
 
 # Все кроме ImageTranser, ecuritySetup и AssociationLogicalName (всего 7 объектов для 1ф)
@@ -81,7 +76,7 @@ def read_obj(obj, reader, attribute):
 
 def get_value_from_data(obj, reader, attribute):
     if obj.logicalName in ['0.0.42.0.0.255', '0.0.96.1.0.255', '0.0.96.1.1.255', '0.0.96.1.2.255', '0.0.96.1.3.255',
-                           '0.0.96.1.4.255', '0.0.96.1.6.255', '0.0.96.1.8.255', '0.0.96.1.9.255'] and attribute == '2':
+                           '0.0.96.1.6.255', '0.0.96.1.8.255', '0.0.96.1.9.255'] and attribute == '2':
         value = reader.read(obj, int(attribute)).decode()
     elif obj.logicalName == '0.0.0.9.2.255' and attribute == '2':
         value = reader.read(obj, int(attribute)).value.strftime('%d.%m.%Y')
@@ -114,6 +109,12 @@ def get_value_from_data(obj, reader, attribute):
         n_6 = str(last_event_for_push[0][5])
 
         value = [n_1 + '.' + n_2 + '.' + n_3 + '.' + n_4 + '.' + n_5 + '.' + n_6, last_event_for_push[1]]
+    elif obj.logicalName == '0.0.96.1.4.255' and attribute == '2':
+        value = reader.read(obj, int(attribute))
+        if type(value) is GXDate:
+            value = value.toFormatString('%d.%m.%Y')
+        else:
+            value = value.decode("utf-8")
     else:
         value = reader.read(obj, int(attribute))
     return value

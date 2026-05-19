@@ -4,16 +4,13 @@ import pandas as pd
 
 from PyQt5 import uic
 from PyQt5.QtCore import QObject, pyqtSignal, QSortFilterProxyModel, Qt, QStringListModel
-from PyQt5.QtGui import QIntValidator, QTextCursor, QStandardItemModel
+from PyQt5.QtGui import QIntValidator, QTextCursor
 from PyQt5.QtWidgets import QWidget, QLineEdit, QPushButton, QTextEdit, QMessageBox, QApplication, QComboBox, \
     QVBoxLayout, QDialogButtonBox, QDialog, QSizePolicy, QCompleter
-from gurux_dlms import GXUInt32, GXUInt16, GXReplyData
-from gurux_dlms.enums import DataType, ObjectType
-from gurux_dlms.objects import GXDLMSData, GXDLMSObject
+from gurux_dlms import GXReplyData
+from gurux_dlms.enums import ObjectType
 
-from libs.WorkerThread import WorkerThreadForReadCollection
-from libs.configur import server, login, password, folder
-from libs.connect import connect
+from libs.connect import connecting
 from libs.reader_objects import read_obj
 from libs.recorded_objects import set_value
 from libs.utils import parse_data_type
@@ -117,6 +114,8 @@ class FileUploader(QWidget):
         self.number_com = self.findChild(QLineEdit, 'enter_com')
         self.number_com.setValidator(QIntValidator())
 
+        self.password = self.findChild(QLineEdit, 'enter_pass')
+
         self.obises = self.findChild(QComboBox, 'obis')
         # Подключаем сигнал изменения выбора
         self.obises.currentIndexChanged.connect(self.update_files)
@@ -177,7 +176,8 @@ class FileUploader(QWidget):
         """Обновляет отображение атрибутов в textEdit_2"""
         text = self.attributes_for_recording
         if self.attributes_for_recording:
-            text = "\n".join([f'Ожидается запись значения "{attr[1]}" в атрибут №{attr[2]} объекта {attr[0]}..' for attr in text])
+            text = "\n".join(
+                [f'Ожидается запись значения "{attr[1]}" в атрибут №{attr[2]} объекта {attr[0]}..' for attr in text])
             self.text_edit_2.setPlainText(text)
         else:
             self.text_edit_2.setPlainText('')
@@ -280,13 +280,13 @@ class FileUploader(QWidget):
             self.method_categories = {}
             arr_obis = []
             for key, value in self.objects_list.items():
-                print(key)
+                # print(key)
                 obis = key
                 object_type = value[0]
                 description = value[1]
                 obj = parse_data_type(obis, object_type)
                 if object_type == ObjectType.ASSOCIATION_LOGICAL_NAME:
-                    obj.version = -1 # Модернизирую Association чтобы избежать list_out_of_range (obj.getNames только 8 когда атрибутов 11)getMethodNames
+                    obj.version = -1  # Модернизирую Association чтобы избежать list_out_of_range (obj.getNames только 8 когда атрибутов 11)getMethodNames
                 list_attr = [f'{y} {obj.getNames()[y - 1]}' for y in range(1, obj.getAttributeCount() + 1)]
                 self.attribute_categories[obis] = list_attr
 
@@ -364,15 +364,27 @@ class FileUploader(QWidget):
             return
 
         com = self.number_com.text()
-        reader, settings = connect(com)
+
+        password = self.check_pass()
+        if not password:
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Введите пароль!",
+                QMessageBox.Ok
+            )
+            return
+        reader, settings = connecting(com, password)
         try:
             settings.media.open()
             reader.initializeConnection()
             print("Соединение установлено")
 
-            value = read_obj(temp_object, reader, attribute) # если значение невозможно преобразовать в строку, возвращает ошибку - надо доработать
+            value = read_obj(temp_object, reader,
+                             attribute)  # если значение невозможно преобразовать в строку, возвращает ошибку - надо доработать
 
-            print(f'Для атрибута #{attribute} {atr_description}# объекта {temp_object.logicalName} считано значение >> \n{value}')
+            print(
+                f'Для атрибута #{attribute} {atr_description}# объекта {temp_object.logicalName} считано значение >> \n{value}')
 
             reader.close()
             print("Соединение разорвано\n")
@@ -398,7 +410,8 @@ class FileUploader(QWidget):
             self.update_attributes_display()
             print(f'Для атрибута #{attribute} {atr_description}# объекта {obis} добавлено значение >> ', value)
         except Exception as e:
-            print(f"Ошибка при добавлении атрибута #{attribute} {atr_description}# объекта {obis} на запись в очередь", e)
+            print(f"Ошибка при добавлении атрибута #{attribute} {atr_description}# объекта {obis} на запись в очередь",
+                  e)
             raise
 
     def write_param(self):
@@ -416,7 +429,16 @@ class FileUploader(QWidget):
             print("НЕТ ДАННЫХ ДЛЯ ЗАПИСИ!!!")
             return
         com = self.number_com.text()
-        reader, settings = connect(com)
+        password = self.check_pass()
+        if not password:
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Введите пароль!",
+                QMessageBox.Ok
+            )
+            return
+        reader, settings = connecting(com, password)
         try:
             settings.media.open()
             reader.initializeConnection()
@@ -436,7 +458,6 @@ class FileUploader(QWidget):
             settings.media.close()
             self.update_text(f"Ошибка при записи >> {e}.", "red")
             print("Соединение разорвано\n")
-
 
     def execute_method(self):
         if not self.obises.currentText().strip():
@@ -478,7 +499,16 @@ class FileUploader(QWidget):
             return
 
         com = self.number_com.text()
-        reader, settings = connect(com)
+        password = self.check_pass()
+        if not password:
+            QMessageBox.warning(
+                self,
+                "Предупреждение",
+                "Введите пароль!",
+                QMessageBox.Ok
+            )
+            return
+        reader, settings = connecting(com, password)
         try:
             settings.media.open()
             reader.initializeConnection()
@@ -494,7 +524,7 @@ class FileUploader(QWidget):
                     reply = GXReplyData()
                     reader.readDataBlock(temp_object.adjustToMinute(reader.client), reply)
                 else:
-                    raise Exception ('Метод с уровнем NO ACCESS')
+                    raise Exception('Метод с уровнем NO ACCESS')
             elif temp_object.getObjectType() == ObjectType.PROFILE_GENERIC:
                 if method_number == '1':
                     reply = GXReplyData()
@@ -515,7 +545,8 @@ class FileUploader(QWidget):
             elif temp_object.getObjectType() == ObjectType.COMMUNICATION_PORT_PROTECTION:
                 reply = GXReplyData()
                 try:
-                    reader.readDataBlock(temp_object.reset(reader.client), reply) # включил в блок, потому что возвращает ошибку - мб связано с совместимостью библиотек
+                    reader.readDataBlock(temp_object.reset(reader.client),
+                                         reply)  # включил в блок, потому что возвращает ошибку - мб связано с совместимостью библиотек
                 except:
                     pass
             else:
@@ -530,3 +561,22 @@ class FileUploader(QWidget):
             settings.media.close()
             self.update_text(f"Ошибка при выполнении метода >> {e}.", "red")
             print("Соединение разорвано\n")
+
+    def check_pass(self):
+        if not self.password.text().strip():
+            # Показываем предупреждение
+            reply = QMessageBox.question(
+                self,
+                "Предупреждение",
+                "Данные в поле Пароль отсутствуют! Использовать пароль по умолчанию?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply == QMessageBox.Yes:
+                self.password.setText("1234567898765432")
+                return self.password.text().strip()
+            else:
+                return False
+
+        else:
+            return self.password.text().strip()

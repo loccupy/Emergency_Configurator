@@ -2,8 +2,8 @@ import re
 import zoneinfo
 from datetime import datetime
 
-from gurux_dlms import GXUInt8, GXUInt16, GXStructure, GXUInt32, GXDateTime
-from gurux_dlms.enums import DataType, ObjectType
+from gurux_dlms import GXDateTime
+from gurux_dlms.enums import ObjectType
 
 from libs.parsing import parse_data_object_for_write, parse_clock_object_for_write, \
     parse_profile_generic_object_for_write, parse_auto_connect_object_for_write, \
